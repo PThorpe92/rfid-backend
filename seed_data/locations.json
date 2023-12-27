@@ -1,0 +1,197 @@
+[
+  {
+    "id": 0,
+    "name": "SIGNED_OUT",
+    "level": 0
+  },
+  {
+    "id": 1,
+    "name": "ALPHA_UNIT",
+    "level": 2
+  },
+  {
+    "id": 2,
+    "name": "ACTIVITIES",
+    "level": 2
+  },
+  {
+    "id": 3,
+    "name": "CHAPEL",
+    "level": 2
+  },
+  {
+    "id": 4,
+    "name": "ASU",
+    "level": 2
+  },
+  {
+    "id": 5,
+    "name": "BOOKING",
+    "level": 2
+  },
+  {
+    "id": 6,
+    "name": "BRAVO_UNIT",
+    "level": 2
+  },
+  {
+    "id": 7,
+    "name": "CHARLIE_UNIT",
+    "level": 2
+  },
+  {
+    "id": 8,
+    "name": "CHARLIE_UNIT_CLASSROOM",
+    "level": 2
+  },
+  {
+    "id": 9,
+    "name": "CHAPLAINS_OFFICE",
+    "level": 2
+  },
+  {
+    "id": 10,
+    "name": "COLLEGE_CLASSROOM",
+    "level": 2
+  },
+  {
+    "id": 11,
+    "name": "COMPUTER_LAB",
+    "level": 2
+  },
+  {
+    "id": 12,
+    "name": "CULINARY",
+    "level": 2
+  },
+  {
+    "id": 13,
+    "name": "D_BOARDS",
+    "level": 2
+  },
+  {
+    "id": 14,
+    "name": "DELTA_UNIT",
+    "level": 2
+  },
+  {
+    "id": 15,
+    "name": "DELTA_UNIT_CLASSROOM",
+    "level": 2
+  },
+  {
+    "id": 16,
+    "name": "EDUCATION_CONFERENCE_ROOM",
+    "level": 2
+  },
+  {
+    "id": 17,
+    "name": "ECHO_UNIT",
+    "level": 2
+  },
+  {
+    "id": 18,
+    "name": "FLOOR_JANITOR",
+    "level": 2
+  },
+  {
+    "id": 19,
+    "name": "GYM",
+    "level": 2
+  },
+  {
+    "id": 20,
+    "name": "MCDONALD",
+    "level": 2
+  },
+  {
+    "id": 21,
+    "name": "HOSPITAL",
+    "level": 2
+  },
+  {
+    "id": 22,
+    "name": "KITCHEN",
+    "level": 2
+  },
+  {
+    "id": 23,
+    "name": "LAUNDRY",
+    "level": 2
+  },
+  {
+    "id": 24,
+    "name": "LIBRARY",
+    "level": 2
+  },
+  {
+    "id": 25,
+    "name": "MEDICAL",
+    "level": 2
+  },
+  {
+    "id": 26,
+    "name": "MUSIC_ROOM",
+    "level": 2
+  },
+  {
+    "id": 27,
+    "name": "NCCER",
+    "level": 2
+  },
+  {
+    "id": 28,
+    "name": "OFF_GROUNDS",
+    "level": 2
+  },
+  {
+    "id": 30,
+    "name": "OUTSIDE_RECREATION",
+    "level": 2
+  },
+  {
+    "id": 31,
+    "name": "VISIT_ROOM",
+    "level": 2
+  },
+  {
+    "id": 32,
+    "name": "SMALL_ENGINES",
+    "level": 2
+  },
+  {
+    "id": 33,
+    "name": "WOOD_SHOP",
+    "level": 2
+  },
+  {
+    "id": 34,
+    "name": "WORK_CREW",
+    "level": 2
+  },
+  {
+    "id": 35,
+    "name": "CASEWORKER_HEAL",
+    "level": 2
+  },
+  {
+    "id": 36,
+    "name": "STAFF_JACKSON",
+    "level": 2
+  },
+  {
+    "id": 37,
+    "name": "UM_HARMON",
+    "level": 2
+  },
+  {
+    "id": 39,
+    "name": "STAFF_FRENCH",
+    "level": 2
+  },
+  {
+    "id": 42,
+    "name": "ANNEX",
+    "level": 2
+  }
+]

@@ -1,0 +1,162 @@
+[
+  {
+    "rfid": 1,
+    "location": 18
+  },
+  {
+    "rfid": 4,
+    "location": 19
+  },
+  {
+    "rfid": 4,
+    "location": 19
+  },
+  {
+    "rfid": 8,
+    "location": 13
+  },
+  {
+    "rfid": 4,
+    "location": 13
+  },
+  {
+    "rfid": 2,
+    "location": 18
+  },
+  {
+    "rfid": 8,
+    "location": 19
+  },
+  {
+    "rfid": 2,
+    "location": 21
+  },
+  {
+    "rfid": 6,
+    "location": 19
+  },
+  {
+    "rfid": 4,
+    "location": 13
+  },
+  {
+    "rfid": 1,
+    "location": 3
+  },
+  {
+    "rfid": 5,
+    "location": 42
+  },
+  {
+    "rfid": 8,
+    "location": 2
+  },
+  {
+    "rfid": 8,
+    "location": 2
+  },
+  {
+    "rfid": 8,
+    "location": 28
+  },
+  {
+    "rfid": 1,
+    "location": 42
+  },
+  {
+    "rfid": 8,
+    "location": 19
+  },
+  {
+    "rfid": 9,
+    "location": 21
+  },
+  {
+    "rfid": 5,
+    "location": 9
+  },
+  {
+    "rfid": 1,
+    "location": 13
+  },
+  {
+    "rfid": 1,
+    "location": 8
+  },
+  {
+    "rfid": 4,
+    "location": 20
+  },
+  {
+    "rfid": 7,
+    "location": 19
+  },
+  {
+    "rfid": 8,
+    "location": 3
+  },
+  {
+    "rfid": 4,
+    "location": 13
+  },
+  {
+    "rfid": 2,
+    "location": 17
+  },
+  {
+    "rfid": 5,
+    "location": 19
+  },
+  {
+    "rfid": 6,
+    "location": 21
+  },
+  {
+    "rfid": 6,
+    "location": 32
+  },
+  {
+    "rfid": 4,
+    "location": 13
+  },
+  {
+    "rfid": 1,
+    "location": 3
+  },
+  {
+    "rfid": 5,
+    "location": 42
+  },
+  {
+    "rfid": 8,
+    "location": 2
+  },
+  {
+    "rfid": 8,
+    "location": 2
+  },
+  {
+    "rfid": 8,
+    "location": 28
+  },
+  {
+    "rfid": 1,
+    "location": 42
+  },
+  {
+    "rfid": 8,
+    "location": 19
+  },
+  {
+    "rfid": 9,
+    "location": 21
+  },
+  {
+    "rfid": 5,
+    "location": 9
+  },
+  {
+    "rfid": 1,
+    "location": 13
+  }
+]
