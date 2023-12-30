@@ -21,6 +21,9 @@ function Admin(): JSXElement {
       setTotalPages(pages);
     }
   };
+  const handleRefresh = () => {
+    fetchResidents().then(() => console.log('residents updated'));
+  }
 
   const fetchLocations = async () => {
     const res = await API.GET(`locations?page=${currentPage()}`);
@@ -70,7 +73,7 @@ function Admin(): JSXElement {
         </Show>
 
         <Show when={showResidentsTable()}>
-          <ResidentTable residents={residents()} onRefresh={() => { return }} onClose={onTableClose} />
+          <ResidentTable residents={residents()} onRefresh={handleRefresh} onClose={onTableClose} />
         </Show>
         <Show when={showLocationsTable()}>
           <LocationsTable locations={locations()} />

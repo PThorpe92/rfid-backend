@@ -1,5 +1,6 @@
 import { A } from '@solidjs/router';
 import Navbar from './components/Navbar';
+import { Toaster, toast } from 'solid-toast';
 
 function App() {
   return (

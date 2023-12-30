@@ -19,18 +19,20 @@ function LocationsDropdown(props: LocationModalProps): JSXElement {
   };
 
   return (
-    <div class="dropdown">
-      <label tabindex="0" class="btn m-1">Select Location</label>
-      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-        {props.locations.map((location) => (
-          <li accessKey={'id'}>
-            <a onClick={() => handleLocationChange(location.id)}>
-              {location.name}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <div class="dropdown">
+        <label tabindex="0" class="btn m-1">Select Location</label>
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+          {props.locations.map((location) => (
+            <li accessKey={'id'}>
+              <a onClick={() => handleLocationChange(location.id)}>
+                {location.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }
 

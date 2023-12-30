@@ -1,8 +1,9 @@
 import { createSignal, For, JSX, Show, onMount } from 'solid-js';
 import AddResident from './AddResident'; // Import your AddResident component
-import { SResident } from '../models/models';
+import { ExitType, SResident } from '../models/models';
 import { API } from '../api/api';
 import EditResident from './EditResident';
+import { toast, Toaster } from 'solid-toast';
 
 export interface ResidentsTableProps {
   residents: SResident[];
@@ -14,6 +15,9 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
   const [selectedResident, setSelectedResident] = createSignal<SResident | null>(null);
   const [showAddResident, setShowAddResident] = createSignal(false);
   const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
+  const [showUpdateResident, setShowUpdateResident] = createSignal(false);
+  const [showDeleteResident, setShowDeleteResident] = createSignal(false);
+
 
   const getAllResidents = async () => {
     const res = await API.GET('residents?all=true');
@@ -21,52 +25,49 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
       setAllResidents(res.data as SResident[]);
     }
   };
-
-  const toggleResident = (doc: string) => {
-    const res = allResidents().find((resident) => resident.doc === doc);
-    if (res) {
-      setSelectedResident(res);
-    }
-    return;
+  const handleAddResidentClose = () => {
+    setShowAddResident(false);
   };
 
+  const handleSelectResident = (resident: SResident) => {
+    setSelectedResident(resident);
+  };
+
+  const handleCloseResidentUpdate = (success: ExitType) => {
+    switch (success) {
+      case ExitType.Success:
+        toast.success('Resident updated successfully.');
+        break;
+      case ExitType.Error:
+        toast.error('Resident update failed, please try again.');
+        break;
+      case ExitType.Cancel:
+        toast('Resident update cancelled.');
+        break;
+    }
+    setSelectedResident(null);
+    setShowUpdateResident(false);
+  };
 
   const handleEdit = () => {
-    return (
-      <EditResident />
-    );
+    setShowUpdateResident(true);
   };
 
   const handleDeleteResident = async () => {
     const res = await API.DELETE(`residents/${selectedResident()}`);
     if (res?.success === true) {
+      toast.success('Resident deleted successfully.');
       props.onRefresh();
     }
-
   }
-
   const handleShowDelete = () => {
-    return (
-      <div class="modal active">
-        <a href="#close" class="modal-overlay" aria-label="Close"></a>
-        <div class="modal-container">
-          <div class="modal-header">
-            <a href="#close" class="btn btn-clear float-right" aria-label="Close"></a>
-            <div class="modal-title h5">Delete Selected Residents</div>
-          </div>
-          <div class="modal-body">
-            <div class="content">
-              <p>Are you sure you want to delete the selected residents?</p>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-error" onClick={() => { }}>Delete</button>
-            <a href="#close" class="btn">Cancel</a>
-          </div>
-        </div>
-      </div>
-    );
+    setShowDeleteResident(true);
   };
+
+  const handleHideDelete = () => {
+    setShowDeleteResident(false);
+  };
+
   onMount(() => {
     if (allResidents().length === 0) { getAllResidents }
   });
@@ -76,16 +77,15 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
       <button class="btn btn-primary mb-4" onClick={() => setShowAddResident(true)}>Add Resident</button>
 
       <Show when={showAddResident()}>
-        <AddResident onRefresh={props.onRefresh} />
+        <AddResident onRefresh={props.onRefresh} onClose={handleAddResidentClose} />
       </Show>
       <div class="overflow-x-auto">
-        <table class="table w-full">
+        <table class="table">
           <thead>
             <tr>
               <th></th>
-              <th>RFID</th>
               <th>Name</th>
-              <th>Document</th>
+              <th>DOC</th>
               <th>Room</th>
               <th>Unit</th>
               <th>Level</th>
@@ -96,9 +96,7 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
             <For each={props.residents}>{(resident) =>
               <tr
                 class="hover cursor-pointer"
-                classList={{ 'bg-gray-400': selectedResident() === resident }}
-                onClick={() => setSelectedResident(resident === selectedResident() ? null : resident)}>
-                <td>{resident.id}</td>
+                onClick={() => handleSelectResident(resident)}>
                 <td>{resident.name}</td>
                 <td>{resident.doc}</td>
                 <td>{resident.room}</td>
@@ -111,13 +109,53 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
         </table>
         <br />
         <br />
+        <Toaster
+          position="top-center"
+          gutter={8}
+          containerClassName=""
+          toastOptions={{
+            className: "",
+            duration: 7000,
+            style: {
+              background: "#2b2b2b",
+              color: "#02eb48",
+            },
+          }}
+        />
         <Show when={selectedResident()}>
-          <div class="badge badge-secondary">Selected: {selectedResident()!.name}</div>
+          <Show when={showDeleteResident()}>
+            <div class="modal modal-open">
+              <div class="modal-box">
+                <div class="modal-header">
+                  <div class="modal-title h3">Delete Selected Residents</div>
+                </div>
+                <div class="modal-body">
+                  <div class="content">
+                    <br />
+                    <p class="bg-primary">Are you sure you want to delete the selected resident?</p>
+                    <br />
+                    <div class="justify-center font-mono text-xl">{selectedResident()!.name}</div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-error" onClick={handleDeleteResident}>Delete</button>
+                  <button class="btn" onClick={() => setShowDeleteResident(false)}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          </Show>
+          <div class="btn">Selected: {selectedResident()!.name}</div>
+          <br />
           <button class="btn btn-secondary mt-4" onClick={handleEdit}>Edit Selected</button>
           <button class="btn btn-error mt-4 ml-2" onClick={handleShowDelete}>Delete Selected</button>
         </Show>
       </div>
-      <button class="btn btn-outline mt-4" onClick={() => props.onClose()}>Close</button>
+      <div class="container object-center">
+        <Show when={showUpdateResident()}>
+          <EditResident resident={selectedResident()!} onClose={handleCloseResidentUpdate} />
+        </Show>
+        <button class="btn btn-outline mt-4" onClick={() => props.onClose()}>Close</button>
+      </div>
     </div>
 
   );
