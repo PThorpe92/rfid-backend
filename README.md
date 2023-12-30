@@ -1,6 +1,10 @@
 
 ## Backend for RFID based attendance system for MVCF
 
-This is mirrored from MKastroluca/mvcf-scanner
+### Now this is the main repository as the front-end has been rewritten.
+
+Actix - Backend
+
+SolidJS - Frontend
 
 
