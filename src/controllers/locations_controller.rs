@@ -2,14 +2,16 @@ use super::timestamps_controller::FilterOpts;
 use crate::app_config::DB;
 use crate::models::response::Response;
 use actix_web::http::header::ContentType;
-use actix_web::{get, post, web, HttpResponse, Responder, ResponseError};
+use actix_web::{delete, get, patch, post, web, HttpResponse, Responder, ResponseError};
 use chrono::NaiveDate;
 use entity::{
     locations::{self, Entity as Locations},
     residents::Entity as Residents,
 };
 use entity::{residents, timestamps};
-use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter, Set,
+};
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};
 
@@ -94,6 +96,25 @@ pub async fn store(db: web::Data<DB>, loc: web::Json<locations::Model>) -> impl 
     }
 }
 
+#[rustfmt::skip]
+#[patch("/api/locations/{location_id}")]
+pub async fn update(db: web::Data<DB>, id: web::Path<Id>, loc: web::Json<locations::Model>) -> impl Responder {
+    let db = &db.0;
+    let id = id.into_inner().location_id;
+    if let Some(location) = Locations::find_by_id(id).one(db).await.unwrap_or(None) {
+        let mut active = location.into_active_model();
+        let loc = loc.into_inner();
+        active.name = Set(loc.name);
+        if active.save(db).await.is_ok() {
+            let resp: Response<String> = Response::from_success("Location successfully updated");
+            HttpResponse::Ok().insert_header(ContentType::json()).json(resp)
+        } else {
+            HttpResponse::Ok().insert_header(ContentType::json()).json(Response::<String>::from_error("Error updating location"))
+        }
+    } else {
+        HttpResponse::Ok().insert_header(ContentType::json()).json(Response::<String>::from_error("Error updating location, location not found"))
+    }
+}
 // Get location name from ID
 #[get("/api/locations/{location_id}")]
 pub async fn show(db: web::Data<DB>, id: web::Path<Id>) -> impl Responder {
@@ -116,7 +137,10 @@ pub async fn show(db: web::Data<DB>, id: web::Path<Id>) -> impl Responder {
 // include range in url to show timestamps from /start/end
 #[rustfmt::skip]
 #[get("/api/locations/{location_id}/timestamps/{start_date}/{end_date}")]
-pub async fn show_location_timestamps_range(db: web::Data<DB>, path: web::Path<LocationRange>, query_params: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+pub async fn show_location_timestamps_range(
+    db: web::Data<DB>, 
+    path: web::Path<LocationRange>, 
+    query_params: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let query_params = query_params.into_inner();
     let per_page = query_params.per_page.unwrap_or(10);
     let page = query_params.page.unwrap_or(1);
@@ -167,5 +191,21 @@ pub async fn show_location_residents(db: web::Data<DB>, id: web::Path<Id>, curr:
             .all(db)
             .await.unwrap_or(Vec::new());
         HttpResponse::Ok().insert_header(ContentType::json()).json(Response::from_vec(residents))
+    }
+}
+#[rustfmt::skip]
+#[delete("/api/locations/{location_id}")]
+pub async fn destroy(db: web::Data<DB>, id: web::Path<Id>) -> impl Responder {
+    let db = &db.0;
+    let id = id.into_inner().location_id;
+    if Locations::find_by_id(id).one(db).await.unwrap_or(None).is_some() {
+        if Locations::delete_by_id(id).exec(db).await.is_ok() {
+            let resp: Response<String> = Response::from_success("Location successfully deleted");
+            HttpResponse::Ok().insert_header(ContentType::json()).json(resp)
+        } else {
+            HttpResponse::Ok().insert_header(ContentType::json()).json(Response::<String>::from_error("Error deleting location"))
+        }
+    } else {
+        HttpResponse::Ok().insert_header(ContentType::json()).json(Response::<String>::from_error("Error deleting location, location not found"))
     }
 }

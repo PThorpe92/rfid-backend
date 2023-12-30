@@ -38,6 +38,8 @@ async fn main() -> io::Result<()> {
                 .service(locations_controller::show_location_timestamps_range)
                 .service(locations_controller::show_location_residents)
                 .service(locations_controller::store)
+                .service(locations_controller::update)
+                .service(locations_controller::destroy)
                 .service(residents_controller::index)
                 .service(residents_controller::show)
                 .service(residents_controller::show_resident_timestamps)
