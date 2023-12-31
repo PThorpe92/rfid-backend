@@ -23,7 +23,7 @@ function LocationsDropdown(props: LocationModalProps): JSXElement {
         <ul class="menu flex  bg-base-200 w-56 rounded-box"
           tabindex="0">
           {props.locations.map((location) => (
-            <li accessKey={location.id.toString()} class="w-full">
+            <li accessKey={location.id.toString()}>
               <a onClick={() => handleLocationChange(location.id)}>
                 {`${location.name}      ${countResidentsAtLocation(location.id)}`}
               </a>

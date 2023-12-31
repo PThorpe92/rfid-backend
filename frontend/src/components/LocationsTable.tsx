@@ -80,7 +80,6 @@ function LocationsTable(props: LocationTableProps): JSXElement {
           <thead>
             <tr>
               <th>ID</th>
-              <th></th>
               <th>Name</th>
               <th></th>
               <th>Permission Level</th>

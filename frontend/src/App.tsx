@@ -1,6 +1,5 @@
 import { A } from "@solidjs/router";
 import Navbar from "./components/Navbar";
-import { Toaster, toast } from "solid-toast";
 
 function App() {
   return (
@@ -11,7 +10,7 @@ function App() {
           MVCF Resident Attendance
         </h1>
         <div class="grid gap-10 grid-cols-1 md:grid-cols-2 mt-10">
-          <A href="/active-scan" class="btn btn-primary btn-lg">
+          <A href="/scan" class="btn btn-primary btn-lg">
             Active Scan
           </A>
           <A href="/monitor" class="btn btn-accent btn-lg">

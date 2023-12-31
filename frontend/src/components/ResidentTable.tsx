@@ -1,4 +1,4 @@
-import { createSignal, For, JSX, Show, onMount } from "solid-js";
+import { createSignal, For, JSXElement, Show, onMount } from "solid-js";
 import AddResident from "./AddResident"; // Import your AddResident component
 import { ExitType, SResident } from "../models/models";
 import { API } from "../api/api";
@@ -11,10 +11,9 @@ export interface ResidentsTableProps {
   onClose: () => void;
 }
 
-function ResidentsTable(props: ResidentsTableProps): JSX.Element {
+function ResidentsTable(props: ResidentsTableProps): JSXElement {
   const [selectedResident, setSelectedResident] =
     createSignal<SResident | null>(null);
-  const [showAddResident, setShowAddResident] = createSignal(false);
   const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
   const [showUpdateResident, setShowUpdateResident] = createSignal(false);
   const [showDeleteResident, setShowDeleteResident] = createSignal(false);
@@ -24,9 +23,6 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
     if (res?.data) {
       setAllResidents(res.data as SResident[]);
     }
-  };
-  const handleAddResidentClose = () => {
-    setShowAddResident(false);
   };
 
   const handleSelectResident = (resident: SResident) => {
@@ -64,10 +60,6 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
     setShowDeleteResident(true);
   };
 
-  const handleHideDelete = () => {
-    setShowDeleteResident(false);
-  };
-
   onMount(() => {
     if (allResidents().length === 0) {
       getAllResidents;
@@ -76,19 +68,6 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
 
   return (
     <div class="font-mono">
-      <button
-        class="btn btn-primary mb-4"
-        onClick={() => setShowAddResident(true)}
-      >
-        Add Resident
-      </button>
-
-      <Show when={showAddResident()}>
-        <AddResident
-          onRefresh={props.onRefresh}
-          onClose={handleAddResidentClose}
-        />
-      </Show>
       <div class="overflow-x-auto">
         <table class="table ">
           <thead>

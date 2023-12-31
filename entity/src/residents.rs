@@ -17,7 +17,8 @@ pub struct Model {
     pub doc: String,
     pub room: String,
     pub unit: i32,
-    pub current_location: i32,
+    #[sea_orm(nullable)]
+    pub current_location: Option<i32>,
     pub level: i32,
 }
 

@@ -33,7 +33,7 @@ impl MigrationTrait for Migration {
                     .col(
                         ColumnDef::new(Column::CurrentLocation)
                             .integer()
-                            .not_null()
+                            .null()
                             .default("0"),
                     )
                     .col(

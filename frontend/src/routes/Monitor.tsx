@@ -1,7 +1,6 @@
 import { createSignal, Show, onMount, JSXElement, onCleanup } from "solid-js";
 import { SResident, SLocation } from ".././models/models";
 import { API } from ".././api/api";
-import { initRFIDScanner, cleanupRFIDScanner } from "../components/Scanner";
 import LocationsDropdown from "../components/LocationsDropdown";
 import ResidentsTable from "../components/ResidentTable";
 import Navbar from "../components/Navbar";

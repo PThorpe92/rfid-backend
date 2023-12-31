@@ -6,7 +6,7 @@ import ViewReports from "./routes/Reports";
 import Admin from "./routes/Admin";
 import "./input.css";
 import App from "./App";
-import Monitor from "./routes/monitor";
+import Monitor from "./routes/Monitor";
 
 const root = document.getElementById("root");
 
@@ -19,7 +19,7 @@ render(
   () => (
     <Router>
       <Route path="/" component={App} />
-      <Route path="/active-scan" component={ActiveScan} />
+      <Route path="/scan" component={ActiveScan} />
       <Route path="/reports" component={ViewReports} />
       <Route path="/admin" component={Admin} />
       <Route path="/monitor" component={Monitor} />

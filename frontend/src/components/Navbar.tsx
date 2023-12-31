@@ -18,7 +18,7 @@ function Navbar(): JSXElement {
             <A href="/reports">Reports</A>
           </li>
           <li>
-            <A href="/active-scan">Active Scan</A>
+            <A href="/scan">Active Scan</A>
           </li>
         </ul>
       </div>
