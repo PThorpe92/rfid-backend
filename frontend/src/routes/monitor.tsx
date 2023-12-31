@@ -7,21 +7,33 @@ import ResidentsTable from "../components/ResidentTable";
 import Navbar from "../components/Navbar";
 import { Toaster, toast } from "solid-toast";
 
-function ActiveScan() {
+function Monitor() {
   const [residents, setResidents] = createSignal<SResident[]>([]);
   const [showModal, setShowModal] = createSignal<boolean>(false);
   const [showTable, setShowTable] = createSignal<boolean>(false);
   const [allLocations, setAllLocations] = createSignal<SLocation[]>([]);
   const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
-  const [currentScanLocation, setCurrentScanLocation] = createSignal<number>(0);
-  const [lastResidentScanned, setLastResidentScanned] =
-    createSignal<SResident | null>(null);
+  const [currentLocation, setCurrentLocation] = createSignal<SLocation | null>(null);
+
   let intervalId: number | undefined;
+
+  const fetchResidentsForLocation = async (locationId: number) => {
+    try {
+      const res = await API.GET(`/locations/${locationId}/residents`);
+      if (res?.data) {
+        setResidents(res.data as SResident[]);
+      }
+    } catch (error) {
+      console.error("Error fetching residents:", error);
+      toast.error("Failed to fetch residents.");
+    }
+  };
   const getAllLocations = () => {
     API.GET(`locations?all=true`)
       .then((res) => setAllLocations(res?.data as SLocation[]))
       .catch((err) => console.log(err));
   };
+
   const getAllResidents = async () => {
     const res = await API.GET("residents?all=true");
     if (res?.data) {
@@ -29,26 +41,15 @@ function ActiveScan() {
     }
   }
 
-  const handleScan = (resident: SResident) => {
-    setLastResidentScanned(resident);
-    toast.success(`Resident ${resident.name} scanned in to ${resident.current_location}`);
-    getResidentsByLocation(currentScanLocation());
-  };
-
-  const handleUpdateLocation = (locationId: number) => {
-    setCurrentScanLocation(locationId);
-  };
-
   const refetchData = () => {
-    setResidents(getResidentsByLocation(currentScanLocation()));
+    setResidents(getResidentsByLocation(currentLocation()!.id));
   };
 
   const handleLocationChange = (locationId: number) => {
+    setCurrentLocation(allLocations().find(location => location.id === locationId)!);
     setResidents(getResidentsByLocation(locationId));
-    localStorage.setItem("locationId", locationId.toString());
     setShowModal(false);
     setShowTable(true);
-    initRFIDScanner({ locID: currentScanLocation(), callback: handleScan });
   };
 
   const getResidentsByLocation = (locationId: number): SResident[] => {
@@ -71,24 +72,21 @@ function ActiveScan() {
   onMount(() => {
     checkLocalStorage();
     intervalId = setInterval(() => {
-      if (currentScanLocation()) {
-        getAllResidents();
-        refetchData();
+      if (currentLocation()) {
+        fetchResidentsForLocation(currentLocation()!.id);
       }
-    }, 5000); // Refresh every 5000 milliseconds (5 seconds)
+    }, 5000);
   });
 
   onCleanup(() => {
     clearInterval(intervalId);
-    cleanupRFIDScanner();
   });
 
   return (
     <>
       <Navbar />
-      <Toaster />
       <h1 class="flex justify-center text-xl font-mono">
-        Active Scan and Attendance
+        {currentLocation()!.name} Attendance
       </h1>
       <Show when={showModal()}>
         <div class="flex justify-center">
@@ -113,4 +111,4 @@ function ActiveScan() {
   );
 }
 
-export default ActiveScan;
+export default Monitor;

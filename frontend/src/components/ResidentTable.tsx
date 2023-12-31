@@ -1,26 +1,26 @@
-import { createSignal, For, JSX, Show, onMount } from 'solid-js';
-import AddResident from './AddResident'; // Import your AddResident component
-import { ExitType, SResident } from '../models/models';
-import { API } from '../api/api';
-import EditResident from './EditResident';
-import { toast, Toaster } from 'solid-toast';
+import { createSignal, For, JSX, Show, onMount } from "solid-js";
+import AddResident from "./AddResident"; // Import your AddResident component
+import { ExitType, SResident } from "../models/models";
+import { API } from "../api/api";
+import EditResident from "./EditResident";
+import { toast, Toaster } from "solid-toast";
 
 export interface ResidentsTableProps {
   residents: SResident[];
   onRefresh: () => void;
   onClose: () => void;
-};
+}
 
 function ResidentsTable(props: ResidentsTableProps): JSX.Element {
-  const [selectedResident, setSelectedResident] = createSignal<SResident | null>(null);
+  const [selectedResident, setSelectedResident] =
+    createSignal<SResident | null>(null);
   const [showAddResident, setShowAddResident] = createSignal(false);
   const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
   const [showUpdateResident, setShowUpdateResident] = createSignal(false);
   const [showDeleteResident, setShowDeleteResident] = createSignal(false);
 
-
   const getAllResidents = async () => {
-    const res = await API.GET('residents?all=true');
+    const res = await API.GET("residents?all=true");
     if (res?.data) {
       setAllResidents(res.data as SResident[]);
     }
@@ -36,13 +36,13 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
   const handleCloseResidentUpdate = (success: ExitType) => {
     switch (success) {
       case ExitType.Success:
-        toast.success('Resident updated successfully.');
+        toast.success("Resident updated successfully.");
         break;
       case ExitType.Error:
-        toast.error('Resident update failed, please try again.');
+        toast.error("Resident update failed, please try again.");
         break;
       case ExitType.Cancel:
-        toast('Resident update cancelled.');
+        toast("Resident update cancelled.");
         break;
     }
     setSelectedResident(null);
@@ -56,10 +56,10 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
   const handleDeleteResident = async () => {
     const res = await API.DELETE(`residents/${selectedResident()}`);
     if (res?.success === true) {
-      toast.success('Resident deleted successfully.');
+      toast.success("Resident deleted successfully.");
       props.onRefresh();
     }
-  }
+  };
   const handleShowDelete = () => {
     setShowDeleteResident(true);
   };
@@ -69,21 +69,30 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
   };
 
   onMount(() => {
-    if (allResidents().length === 0) { getAllResidents }
+    if (allResidents().length === 0) {
+      getAllResidents;
+    }
   });
 
   return (
     <div class="font-mono">
-      <button class="btn btn-primary mb-4" onClick={() => setShowAddResident(true)}>Add Resident</button>
+      <button
+        class="btn btn-primary mb-4"
+        onClick={() => setShowAddResident(true)}
+      >
+        Add Resident
+      </button>
 
       <Show when={showAddResident()}>
-        <AddResident onRefresh={props.onRefresh} onClose={handleAddResidentClose} />
+        <AddResident
+          onRefresh={props.onRefresh}
+          onClose={handleAddResidentClose}
+        />
       </Show>
       <div class="overflow-x-auto">
-        <table class="table">
+        <table class="table ">
           <thead>
             <tr>
-              <th></th>
               <th>Name</th>
               <th>DOC</th>
               <th>Room</th>
@@ -93,18 +102,22 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
             </tr>
           </thead>
           <tbody>
-            <For each={props.residents}>{(resident) =>
-              <tr
-                class="hover cursor-pointer"
-                onClick={() => handleSelectResident(resident)}>
-                <td>{resident.name}</td>
-                <td>{resident.doc}</td>
-                <td>{resident.room}</td>
-                <td>{resident.unit}</td>
-                <td>{resident.level}</td>
-                <td>{resident.current_location}</td>
-              </tr>
-            }</For>
+            <For each={props.residents}>
+              {(resident) => (
+                <tr
+                  class="hover cursor-pointer"
+                  classList={{ 'bg-secondary-100': resident.current_location !== parseInt(localStorage.getItem("locationId")!, 10) }}
+                  onClick={() => handleSelectResident(resident)}
+                >
+                  <td>{resident.name}</td>
+                  <td>{resident.doc}</td>
+                  <td>{resident.room}</td>
+                  <td>{resident.unit}</td>
+                  <td>{resident.level}</td>
+                  <td>{resident.current_location}</td>
+                </tr>
+              )}
+            </For>
           </tbody>
         </table>
         <br />
@@ -132,32 +145,51 @@ function ResidentsTable(props: ResidentsTableProps): JSX.Element {
                 <div class="modal-body">
                   <div class="content">
                     <br />
-                    <p class="bg-primary">Are you sure you want to delete the selected resident?</p>
+                    <p class="bg-primary">
+                      Are you sure you want to delete the selected resident?
+                    </p>
                     <br />
-                    <div class="justify-center font-mono text-xl">{selectedResident()!.name}</div>
+                    <div class="justify-center font-mono text-xl">
+                      {selectedResident()!.name}
+                    </div>
                   </div>
                 </div>
                 <div class="modal-footer">
-                  <button class="btn btn-error" onClick={handleDeleteResident}>Delete</button>
-                  <button class="btn" onClick={() => setShowDeleteResident(false)}>Cancel</button>
+                  <button class="btn btn-error" onClick={handleDeleteResident}>
+                    Delete
+                  </button>
+                  <button
+                    class="btn"
+                    onClick={() => setShowDeleteResident(false)}
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             </div>
           </Show>
           <div class="btn">Selected: {selectedResident()!.name}</div>
           <br />
-          <button class="btn btn-secondary mt-4" onClick={handleEdit}>Edit Selected</button>
-          <button class="btn btn-error mt-4 ml-2" onClick={handleShowDelete}>Delete Selected</button>
+          <button class="btn btn-secondary mt-4" onClick={handleEdit}>
+            Edit Selected
+          </button>
+          <button class="btn btn-error mt-4 ml-2" onClick={handleShowDelete}>
+            Delete Selected
+          </button>
         </Show>
       </div>
       <div class="container object-center">
         <Show when={showUpdateResident()}>
-          <EditResident resident={selectedResident()!} onClose={handleCloseResidentUpdate} />
+          <EditResident
+            resident={selectedResident()!}
+            onClose={handleCloseResidentUpdate}
+          />
         </Show>
-        <button class="btn btn-outline mt-4" onClick={() => props.onClose()}>Close</button>
+        <button class="btn btn-outline mt-4" onClick={() => props.onClose()}>
+          Close
+        </button>
       </div>
     </div>
-
   );
 }
 

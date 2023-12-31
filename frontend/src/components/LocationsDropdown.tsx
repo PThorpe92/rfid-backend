@@ -1,32 +1,31 @@
-import { JSXElement } from 'solid-js';
-import { SLocation } from '../models/models';
-
-interface LocationModalProps {
-  onClose: () => void;
-  onLocationSelect: (locationId: number) => void;
-}
+import { JSXElement } from "solid-js";
+import { SLocation, SResident } from "../models/models";
 
 interface LocationModalProps {
   locations: SLocation[];
   onClose: () => void;
   onLocationSelect: (locationId: number) => void;
+  residents: SResident[];
 }
 
 function LocationsDropdown(props: LocationModalProps): JSXElement {
-
   const handleLocationChange = (locationId: number) => {
     props.onLocationSelect(locationId);
+  };
+
+  const countResidentsAtLocation = (locationId: number): string => {
+    return props.residents.length > 0 ? props.residents.filter(resident => resident.current_location === locationId).length.toString() : ""
   };
 
   return (
     <>
       <div class="dropdown">
-        <label tabindex="0" class="btn m-1">Select Location</label>
-        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+        <ul class="menu flex  bg-base-200 w-56 rounded-box"
+          tabindex="0">
           {props.locations.map((location) => (
-            <li accessKey={'id'}>
+            <li accessKey={location.id.toString()} class="w-full">
               <a onClick={() => handleLocationChange(location.id)}>
-                {location.name}
+                {`${location.name}      ${countResidentsAtLocation(location.id)}`}
               </a>
             </li>
           ))}
@@ -35,5 +34,4 @@ function LocationsDropdown(props: LocationModalProps): JSXElement {
     </>
   );
 }
-
 export default LocationsDropdown;

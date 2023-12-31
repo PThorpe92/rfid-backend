@@ -15,28 +15,46 @@ interface ScanCallback {
 
 const handleRFIDScan = async (rfid: string, data: ScanCallback) => {
   try {
-    const response = await API.POST(`timestamps`, { rfid: rfid, location: data.locID });
+    const response = await API.POST(`timestamps`, {
+      rfid: rfid,
+      location: data.locID,
+    });
     if (response && response.data) {
-      const resident: SResidentTimestamp = response.data!.at(0) as SResidentTimestamp;
+      const resident: SResidentTimestamp = response.data!.at(
+        0,
+      ) as SResidentTimestamp;
       if (resident.location === 0) {
         // Prompt for destination ID
         const destinationId = prompt("Please enter your destination ID:");
         if (destinationId) {
           // Send another POST request with the destination ID
-          const response = await API.POST("timestamps", { rfid, location: parseInt(destinationId, 10) });
+          const response = await API.POST("timestamps", {
+            rfid,
+            location: parseInt(destinationId, 10),
+          });
           if (response && response.data) {
-            const resident: SResidentTimestamp = response.data!.at(0) as SResidentTimestamp;
-            toast.success(`Resident ${resident.resident.name} is now at ${resident.resident.current_location}`);
+            const resident: SResidentTimestamp = response.data!.at(
+              0,
+            ) as SResidentTimestamp;
+            toast.success(
+              `Resident ${resident.resident.name} is now at ${resident.resident.current_location}`,
+            );
             data.callback(resident.resident);
           }
         } else {
           // Handle case where destination ID is not entered
-          toast.error("No destination ID entered, Resident: " + resident.resident.name + " now signed out.");
+          toast.error(
+            "No destination ID entered, Resident: " +
+              resident.resident.name +
+              " now signed out.",
+          );
           data.callback(resident.resident);
         }
       } else {
         // Handle normal case where resident is signing in/out
-        toast.success(`Resident ${resident.resident.name} is now at ${resident.resident.current_location}`);
+        toast.success(
+          `Resident ${resident.resident.name} is now at ${resident.resident.current_location}`,
+        );
         data.callback(resident.resident);
       }
     } else {
@@ -46,7 +64,6 @@ const handleRFIDScan = async (rfid: string, data: ScanCallback) => {
     toast.error("Error processing RFID scan, please try again");
   }
 };
-
 
 export const initRFIDScanner = (data: ScanCallback) => {
   window.addEventListener("keydown", (event: KeyboardEvent) => {
@@ -67,7 +84,7 @@ export const initRFIDScanner = (data: ScanCallback) => {
 };
 
 export const cleanupRFIDScanner = () => {
-  window.removeEventListener("keydown", () => { });
+  window.removeEventListener("keydown", () => {});
   scannedRFID = "";
   lastKeyPressTime = 0;
 };

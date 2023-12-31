@@ -48,7 +48,10 @@ export class API {
     }
   }
 
-  static async POST(uri: string, payload: any): Promise<ServerResponse | undefined> {
+  static async POST(
+    uri: string,
+    payload: any,
+  ): Promise<ServerResponse | undefined> {
     try {
       const response = await fetch(this.fullUrl + uri, {
         method: "POST",
@@ -65,9 +68,7 @@ export class API {
     }
   }
 
-  static async DELETE(
-    uri: string,
-  ): Promise<ServerResponse | undefined> {
+  static async DELETE(uri: string): Promise<ServerResponse | undefined> {
     try {
       const response = await fetch(this.fullUrl + uri, {
         method: "DELETE",

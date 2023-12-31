@@ -1,4 +1,3 @@
-
 export interface SResidentTimestamp {
   [key: string]: any;
   resident: SResident;
