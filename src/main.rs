@@ -47,6 +47,7 @@ async fn main() -> io::Result<()> {
                 .service(residents_controller::store)
                 .service(residents_controller::destroy)
                 .service(residents_controller::update)
+                .service(residents_controller::upload_jpg)
                 .service(timestamps_controller::index_timestamps)
                 .service(timestamps_controller::show_range)
                 .service(timestamps_controller::store_timestamp)

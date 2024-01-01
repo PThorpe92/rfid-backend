@@ -12,7 +12,7 @@ function ActiveScan() {
   const [showModal, setShowModal] = createSignal<boolean>(false);
   const [showTable, setShowTable] = createSignal<boolean>(false);
   const [allLocations, setAllLocations] = createSignal<SLocation[]>([]);
-  const [allResidents, setAllResidents] = createSignal<SResident[] | null>(null);
+  const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
   const [currentScanLocation, setCurrentScanLocation] = createSignal<number>(0);
   const [lastResidentScanned, setLastResidentScanned] = createSignal<SResident | null>(null);
   const [showAddResident, setShowAddResident] = createSignal(false);
@@ -118,6 +118,7 @@ function ActiveScan() {
     }
   };
 
+  // ********** Initialize RFID scanner **************
   const initRFIDScanner = () => {
     // Create a hidden input element
     hiddenInput.focus();
@@ -156,9 +157,9 @@ function ActiveScan() {
   };
 
   const getResidentsByLocation = (locationId: number): SResident[] => {
-    return allResidents().filter(resident => resident.unit === locationId).length === 0
-      ? allResidents().filter(resident => resident.current_location === locationId)
-      : allResidents().filter(resident => resident.unit === locationId || resident.current_location === locationId);
+    return allResidents()!.filter(resident => resident.unit === locationId).length === 0
+      ? allResidents()?.filter(resident => resident.current_location === locationId)
+      : allResidents()?.filter(resident => resident.unit === locationId || resident.current_location === locationId);
   };
 
   const handleCloseTable = () => {

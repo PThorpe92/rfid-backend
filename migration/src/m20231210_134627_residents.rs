@@ -33,7 +33,7 @@ impl MigrationTrait for Migration {
                     .col(
                         ColumnDef::new(Column::CurrentLocation)
                             .integer()
-                            .null()
+                            .not_null()
                             .default("0"),
                     )
                     .col(
@@ -41,6 +41,12 @@ impl MigrationTrait for Migration {
                             .integer()
                             .not_null()
                             .default(4),
+                    )
+                    .col(
+                        ColumnDef::new(Column::IsDeleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
                     )
                     .to_owned(),
             )

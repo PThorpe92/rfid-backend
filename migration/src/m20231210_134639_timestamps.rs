@@ -25,7 +25,7 @@ impl MigrationTrait for Migration {
                     .col(
                         ColumnDef::new(timestamps::Column::Rfid)
                             .integer()
-                            .not_null(),
+                            .default(00000000000000000),
                     )
                     .col(
                         ColumnDef::new(timestamps::Column::Location)
@@ -47,7 +47,7 @@ impl MigrationTrait for Migration {
                     .name("fk_timestamps_residents")
                     .from(Timestamps, timestamps::Column::Rfid)
                     .to(Residents, residents::Column::Id)
-                    .on_delete(ForeignKeyAction::NoAction)
+                    .on_delete(ForeignKeyAction::SetDefault)
                     .to_owned(),
             )
             .await?;

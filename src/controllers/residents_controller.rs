@@ -1,10 +1,11 @@
+use super::timestamps_controller::FilterOpts;
 use crate::app_config::DB;
 use crate::models::residents::UpdateResident;
 use crate::models::{
     residents::{PathParams, Rfid},
     response::Response,
 };
-use actix_web::Responder;
+use actix_multipart::Multipart;
 use actix_web::{
     delete, get,
     http::{header, StatusCode},
@@ -14,11 +15,35 @@ use entity::{
     residents::{self, Entity as Resident},
     timestamps,
 };
+use futures_util::{StreamExt, TryStreamExt};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set, TryIntoModel,
 };
 
-use super::timestamps_controller::FilterOpts;
+use std::io::Write;
+
+#[rustfmt::skip]
+#[post("/api/residents/{doc}/upload")]
+async fn upload_jpg(path: web::Path<String>, mut payload: Multipart) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+    let filename = path.into_inner();
+    while let Ok(Some(mut field)) = payload.try_next().await {
+        let content_disposition = field.content_disposition();
+        let field_name = content_disposition.get_name();
+        if field_name == Some("file") {
+        let filepath = format!("frontend/imgs/{}.jpg", filename);
+            let mut f = web::block(move || std::fs::File::create(filepath))
+                .await?
+                .unwrap();
+            while let Some(chunk) = field.next().await {
+                let data = chunk.unwrap();
+                f = web::block(move || f.write_all(&data).map(|_| f)).await?.unwrap();
+            }
+        }
+    }
+    Ok(HttpResponse::Ok()
+        .insert_header(header::ContentType::json())
+        .json(Response::<String>::from_success("File uploaded")))
+}
 
 #[rustfmt::skip]
 #[get("/api/residents")]
@@ -26,7 +51,7 @@ pub async fn index(db: web::Data<DB>,params: web::Query<FilterOpts>) -> Result<H
     let db = &db.0;
     let params = params.into_inner();
     if let Some(true) = params.all {
-        let residents = Resident::find().all(db).await?;
+        let residents = Resident::find().filter(residents::Column::IsDeleted.eq(false)).all(db).await?;
         let response: Response<residents::Model> = Response::from_vec(residents);
         return Ok(HttpResponse::Ok()
             .insert_header(header::ContentType::json())
@@ -48,7 +73,7 @@ pub async fn index(db: web::Data<DB>,params: web::Query<FilterOpts>) -> Result<H
 pub async fn show(db: web::Data<DB>, rfid: actix_web::web::Path<Rfid>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
     let rfid = rfid.into_inner().rfid;
-    if let Ok(resident) = Resident::find().filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
+    if let Ok(resident) = Resident::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
     if resident.is_none() {
         let error = Response::<String>::from_error("Error retrieving residents");
         return Ok(HttpResponse::Ok()
@@ -77,18 +102,16 @@ pub async fn store(db: web::Data<DB>, resident: web::Json<UpdateResident>) -> Re
 
 #[rustfmt::skip]
 #[delete("/api/residents/{rfid}")]
-pub async fn destroy(db: web::Data<DB>, rfid: web::Path<String>,) -> impl Responder {
+pub async fn destroy(db: web::Data<DB>, rfid: web::Path<String>,) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
     let rfid = rfid.into_inner();
     if let Ok(resident) = Resident::find().filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
-    let resident: residents::ActiveModel = resident.unwrap().into();
-    match resident.delete(db).await {
-        Ok(_) => 
-    HttpResponse::Ok().status(StatusCode::NO_CONTENT).json(Response::<String>::from_success(&format!("Deleted resident: {}", rfid))),
-    Err(e) => HttpResponse::Ok().body(format!("Error deleting resident: {}", e))
-    }
+    let mut resident: residents::ActiveModel = resident.unwrap().into();
+        resident.is_deleted = Set(true);
+    resident.save(db).await?;
+        Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(Response::<residents::Model>::from_success("Resident deleted")))
     } else {
-        HttpResponse::Ok().insert_header(header::ContentType::json()).json(Response::<String>::from_error("Error deleting resident"))
+        Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(Response::<String>::from_error("Error deleting resident")))
     }
 }
 
@@ -98,7 +121,7 @@ pub async fn update(db: web::Data<DB>, rfid: actix_web::web::Path<Rfid>, residen
      let db = &db.0;
     let rfid = rfid.into_inner().rfid;
     let resident = resident.into_inner();
-    if let Ok(to_update) = Resident::find().filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
+    if let Ok(to_update) = Resident::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
     if to_update.is_none() {
         let error = Response::<String>::from_error("Error retrieving resident");
         return Ok(HttpResponse::Ok()

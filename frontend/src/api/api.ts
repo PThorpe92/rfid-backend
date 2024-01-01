@@ -7,11 +7,15 @@ export class API {
 
   public static headers = {
     accept: "application/json",
-    "Content-Type": "application/json",
+    "Content-Type": "application/json"
+  };
+
+  public static photoHeaders = {
+    accept: "application/json",
+    "Content-Type": "image/jpeg"
   };
 
   static async GET(uri: string): Promise<ServerResponse | undefined> {
-    console.log("ADDR:", this.url, this.port, this.fullUrl);
     try {
       const response = await fetch(this.fullUrl + uri, {
         method: "GET",
@@ -48,10 +52,7 @@ export class API {
     }
   }
 
-  static async POST(
-    uri: string,
-    payload: any,
-  ): Promise<ServerResponse | undefined> {
+  static async POST(uri: string, payload: any): Promise<ServerResponse | undefined> {
     try {
       const response = await fetch(this.fullUrl + uri, {
         method: "POST",
@@ -64,6 +65,23 @@ export class API {
       return await response.json();
     } catch (err) {
       console.error("POST ERROR:", err);
+      return undefined;
+    }
+  }
+
+  static async UPLOAD(uri: string, payload: FormData): Promise<ServerResponse | undefined> {
+    try {
+      const response = await fetch(this.fullUrl + uri, {
+        method: "POST",
+        headers: this.photoHeaders,
+        body: payload,
+      });
+      if (!response.ok) {
+        throw Error(response.statusText);
+      }
+      return await response.json();
+    } catch (err) {
+      console.error("UPLOAD ERROR:", err);
       return undefined;
     }
   }

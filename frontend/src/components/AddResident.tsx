@@ -14,11 +14,13 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     roomNumber: string;
     bunk: "T" | "B";
   }
+  const [uploadFile, setUploadFile] = createSignal<FormData>(new FormData);
   const [editRoom, setEditRoom] = createSignal<buildRoom>({
     pod: "A",
     roomNumber: "1",
     bunk: "T",
   });
+
   const [newResident, setNewResident] = createSignal<SResident>({
     current_location: 0,
     rfid: "",
@@ -36,7 +38,26 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
   const levels = Array.from({ length: 5 }, (_, i) => i + 1);
 
   const updateRoom = (field: keyof buildRoom, value: string | number) => {
+    if (field === 'bunk' && value === 'Top') {
+      setEditRoom({ ...editRoom(), bunk: 'T' });
+      return;
+    } else if (field === 'bunk' && value === 'Bottom') {
+      setEditRoom({ ...editRoom(), bunk: 'B' });
+      return;
+    }
     setEditRoom({ ...editRoom(), [field]: value });
+  };
+  // handle file upload. pictures are stored on the front end 
+  // in the /imgs folder and are named the residents DOC#.jpg
+  const handleFileUpload = (e: any) => {
+    const field = e.target;
+    if (field.files.length > 0) {
+      console.log("file found!")
+      const file = field.files[0];
+      const data = new FormData();
+      data.append("file", file);
+      setUploadFile(data);
+    }
   };
 
   const updateUnit = (unit: string) => {
@@ -76,6 +97,14 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     } else {
       toast.error("Error adding resident");
       props.onClose();
+    }
+    if (uploadFile() !== null) {
+      const res = await API.UPLOAD(`residents/${newResident().doc}/upload`, uploadFile());
+      if (res !== undefined && res.success) {
+        toast.success("Image uploaded successfully");
+      } else {
+        toast.error("Error uploading image");
+      }
     }
   };
 
@@ -153,6 +182,10 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
                 <option value={level}>{level}</option>
               ))}
             </select>
+          </div>
+          <label class="label label-outline justify-center">Upload Image</label>
+          <div class="modal-action">
+            <input type="file" onChange={handleFileUpload} class="file-input file-input-bordered file-input-accent w-full max-w-xs" />
           </div>
           <div class="modal-action">
             <button class="btn" onClick={handleSubmit}>

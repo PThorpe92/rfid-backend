@@ -50,7 +50,7 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
   };
 
   const handleDeleteResident = async () => {
-    const res = await API.DELETE(`residents/${selectedResident()}`);
+    const res = await API.DELETE(`residents/${selectedResident()?.rfid}`);
     if (res?.success === true) {
       toast.success("Resident deleted successfully.");
       props.onRefresh();
@@ -115,6 +115,31 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
           }}
         />
         <Show when={selectedResident()}>
+          <div class="modal modal-open">
+            <div class="modal-box">
+              <div class="modal-title">
+                <img src={`/imgs/${selectedResident()!.doc}.jpg`} alt="Resident Photo" />
+                <div class="font-mono text-xl">Name: {selectedResident()!.name}</div>
+                <div class="font-mono text-xl">DOC#: {selectedResident()!.doc}</div>
+                <div class="font-mono text-xl">Pod/Room/Bunk: {selectedResident()!.room}</div>
+                <div class="font-mono text-xl">Unit: {selectedResident()!.unit}</div>
+                <div class="font-mono text-xl">Level: {selectedResident()!.level}</div>
+              </div>
+              <div class="modal-body">
+                <div class="content">
+                  <button class="btn btn-outline" onClick={handleEdit}>
+                    Edit
+                  </button>
+                  <button class="btn btn-error" onClick={handleShowDelete}>
+                    Delete
+                  </button>
+                  <button class="btn btn-outline" onClick={() => setSelectedResident(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
           <Show when={showDeleteResident()}>
             <div class="modal modal-open">
               <div class="modal-box">
@@ -147,14 +172,6 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
               </div>
             </div>
           </Show>
-          <div class="btn">Selected: {selectedResident()!.name}</div>
-          <br />
-          <button class="btn btn-secondary mt-4" onClick={handleEdit}>
-            Edit Selected
-          </button>
-          <button class="btn btn-error mt-4 ml-2" onClick={handleShowDelete}>
-            Delete Selected
-          </button>
         </Show>
       </div>
       <div class="container object-center">

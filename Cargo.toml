@@ -36,3 +36,4 @@ entity = { path = "entity" }
 migration = { path = "migration" }
 testapi = { path = "testapi" }
 dotenvy = "0.15.7"
+actix-multipart = "0.6.1"

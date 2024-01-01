@@ -17,9 +17,10 @@ pub struct Model {
     pub doc: String,
     pub room: String,
     pub unit: i32,
-    #[sea_orm(nullable)]
-    pub current_location: Option<i32>,
+    pub current_location: i32,
     pub level: i32,
+    #[serde(skip)]
+    pub is_deleted: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
