@@ -59,7 +59,7 @@ pub async fn index(db: web::Data<DB>,params: web::Query<FilterOpts>) -> Result<H
     }
     let per_page = params.per_page.unwrap_or(10);
     let page = params.page.unwrap_or(1);
-    let residents = Resident::find().paginate(db, per_page);
+    let residents = Resident::find().filter(residents::Column::IsDeleted.eq(false)).paginate(db, per_page);
     let resp = residents.fetch_page(page - 1).await?;
     let total_pages = residents.num_pages().await?;
     let response = Response::from_paginator(total_pages, resp);
@@ -153,7 +153,12 @@ pub async fn show_resident_timestamps(db: web::Data<DB>, rfid: actix_web::web::P
     let page = query_params.page.unwrap_or(1);
     let db = &db.0;
     let rfid = rfid.into_inner().rfid;
-    if let Some(resident) = residents::Entity::find().filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await? {
+    if let Some(resident) =
+                    residents::Entity::find()
+                                        .filter(residents::Column::IsDeleted.eq(false))
+                                        .filter(residents::Column::Rfid
+                                        .eq(rfid.clone()))
+                                        .one(db).await? {
     let ts = timestamps::Entity::find()
         .filter(timestamps::Column::Rfid.eq(resident.id))
         .paginate(db, per_page);

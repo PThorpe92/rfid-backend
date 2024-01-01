@@ -54,8 +54,10 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
     if (res?.success === true) {
       toast.success("Resident deleted successfully.");
       props.onRefresh();
+      setShowDeleteResident(false);
     }
   };
+
   const handleShowDelete = () => {
     setShowDeleteResident(true);
   };
@@ -107,7 +109,7 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
           containerClassName=""
           toastOptions={{
             className: "",
-            duration: 7000,
+            duration: 3000,
             style: {
               background: "#2b2b2b",
               color: "#02eb48",
