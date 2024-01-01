@@ -15,9 +15,16 @@ async fn main() -> io::Result<()> {
     std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
     dotenvy::dotenv().ok();
+    let upload_dir = std::env::var("UPLOAD_FILE_PATH");
+    log::debug!(
+        "Temp file path: {:?}",
+        upload_dir.clone().unwrap_or("dumb".to_string())
+    );
     let ip = std::env::var("LOCAL_IP").unwrap_or("localhost".to_string());
     log::info!("starting Actix-Web HTTP server at http://{}", ip);
     let json_config = JsonConfig::default().limit(4096);
+    let tempfile_path = actix_multipart::form::tempfile::TempFileConfig::default();
+    let tempfile_path = tempfile_path.directory(upload_dir.unwrap_or_default());
     if let Ok(db) = DB::get().await {
         log::info!("Connected to database");
 
@@ -31,6 +38,7 @@ async fn main() -> io::Result<()> {
 
             App::new()
                 .app_data(Data::new(db.clone()))
+                .app_data(Data::new(tempfile_path.clone()))
                 .app_data(json_config.clone())
                 .service(locations_controller::index)
                 .service(locations_controller::show)

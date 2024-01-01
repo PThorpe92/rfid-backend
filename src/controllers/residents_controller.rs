@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use super::timestamps_controller::FilterOpts;
 use crate::app_config::DB;
 use crate::models::residents::UpdateResident;
@@ -5,7 +7,8 @@ use crate::models::{
     residents::{PathParams, Rfid},
     response::Response,
 };
-use actix_multipart::Multipart;
+use actix_multipart::form::tempfile::TempFile;
+use actix_multipart::form::MultipartForm;
 use actix_web::{
     delete, get,
     http::{header, StatusCode},
@@ -15,34 +18,46 @@ use entity::{
     residents::{self, Entity as Resident},
     timestamps,
 };
-use futures_util::{StreamExt, TryStreamExt};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set, TryIntoModel,
 };
-
-use std::io::Write;
+#[derive(MultipartForm)]
+pub struct FormData {
+    pub file: TempFile,
+}
 
 #[rustfmt::skip]
 #[post("/api/residents/{doc}/upload")]
-async fn upload_jpg(path: web::Path<String>, mut payload: Multipart) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    let filename = path.into_inner();
-    while let Ok(Some(mut field)) = payload.try_next().await {
-        let content_disposition = field.content_disposition();
-        let field_name = content_disposition.get_name();
-        if field_name == Some("file") {
-        let filepath = format!("frontend/imgs/{}.jpg", filename);
-            let mut f = web::block(move || std::fs::File::create(filepath))
-                .await?
-                .unwrap();
-            while let Some(chunk) = field.next().await {
-                let data = chunk.unwrap();
-                f = web::block(move || f.write_all(&data).map(|_| f)).await?.unwrap();
-            }
+async fn upload_jpg(path: web::Path<String>,  form: MultipartForm<FormData>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+    let default = std::env::var("UPLOAD_FILE_PATH").unwrap_or_default();
+    let path = path.into_inner();
+    let path = format!("{}.jpg", path);
+    const MAX_FILE_SIZE: u64 = 1024 * 1024 * 20; // 20 MB
+    match form.file.size {
+        0 => return Ok(HttpResponse::BadRequest().finish()),
+        length if length > MAX_FILE_SIZE as usize => {
+            return Ok(HttpResponse::BadRequest()
+                .body(format!("The uploaded file is too large. Maximum size is {} bytes.", MAX_FILE_SIZE)));
+        },
+        _ => {}
+    };
+    // get the filename and path we want
+    let pathbuf = PathBuf::from(default);
+    let pathbuf = pathbuf.join(path);
+
+    let file_path = form.file.file.path();
+    let received_file = PathBuf::from(file_path);
+
+    match std::fs::rename(received_file, pathbuf.clone()) {
+        Ok(_) =>  {
+             log::debug!("File saved to {:?}", pathbuf);
+            Ok(HttpResponse::Ok().json(Response::<String>::from_success("File uploaded")))
+        }
+        Err(e) => {
+            log::error!("Error renaming file: {}", e);
+            Ok(HttpResponse::InternalServerError().finish())
         }
     }
-    Ok(HttpResponse::Ok()
-        .insert_header(header::ContentType::json())
-        .json(Response::<String>::from_success("File uploaded")))
 }
 
 #[rustfmt::skip]
@@ -153,12 +168,7 @@ pub async fn show_resident_timestamps(db: web::Data<DB>, rfid: actix_web::web::P
     let page = query_params.page.unwrap_or(1);
     let db = &db.0;
     let rfid = rfid.into_inner().rfid;
-    if let Some(resident) =
-                    residents::Entity::find()
-                                        .filter(residents::Column::IsDeleted.eq(false))
-                                        .filter(residents::Column::Rfid
-                                        .eq(rfid.clone()))
-                                        .one(db).await? {
+    if let Some(resident) = residents::Entity::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await? {
     let ts = timestamps::Entity::find()
         .filter(timestamps::Column::Rfid.eq(resident.id))
         .paginate(db, per_page);

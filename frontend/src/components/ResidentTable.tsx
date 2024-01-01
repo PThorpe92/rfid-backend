@@ -55,6 +55,7 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
       toast.success("Resident deleted successfully.");
       props.onRefresh();
       setShowDeleteResident(false);
+      setSelectedResident(null);
     }
   };
 

@@ -73,7 +73,9 @@ export class API {
     try {
       const response = await fetch(this.fullUrl + uri, {
         method: "POST",
-        headers: this.photoHeaders,
+        headers: {
+          accept: "application/json",
+        },
         body: payload,
       });
       if (!response.ok) {

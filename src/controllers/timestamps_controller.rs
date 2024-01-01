@@ -45,7 +45,7 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
 pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTimestamp>) -> Result<HttpResponse, Box<dyn std::error::Error>>{
     let db = &db.0;
     let mut timestamp = timestamp_data.into_inner();
-    match Resident::find().filter(residents::Column::Rfid.eq(timestamp.rfid.clone())).one(db).await? {
+    match Resident::find().filter(residents::Column::Rfid.eq(timestamp.rfid.clone())).filter(residents::Column::IsDeleted.eq(false)).one(db).await? {
         Some(resident) => {
              let mut resident = resident.into_active_model();
                 if timestamp.location == resident.current_location.to_owned().unwrap() {

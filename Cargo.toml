@@ -10,22 +10,22 @@ members = [".", "entity", "migration", "testapi"]
 
 
 [dependencies]
-serde_json = { version = "1.0.108", features = ["std"] }
-serde = { version = "1.0.190", features = ["derive"] }
+serde_json = { version = "1.0.109", features = ["std"] }
+serde = { version = "1.0.193", features = ["derive"] }
 dirs = "5.0.1"
-once_cell = "1.18.0"
-chrono = "0.4.30"
+once_cell = "1.19.0"
+chrono = "0.4.31"
 actix = "0.13.1"
-actix-web = { version = "4.4.0", features = ["http2", "macros"] }
-env_logger = "0.10.0"
+actix-web = { version = "4.4.1", features = ["http2", "macros"] }
+env_logger = "0.10.1"
 log = "0.4.20"
-futures-util = "0.3.29"
+futures-util = "0.3.30"
 serde_with = "3.4.0"
-reqwest = "0.11.22"
+reqwest = "0.11.23"
 actix-cors = "0.6.5"
 sqlx-postgres = "0.7.3"
 actix-session = "0.8.0"
-sea-orm = { version = "0.12.9", features = [
+sea-orm = { version = "0.12.10", features = [
   "sqlx-postgres",
   "runtime-tokio-native-tls",
   "macros",
@@ -36,4 +36,4 @@ entity = { path = "entity" }
 migration = { path = "migration" }
 testapi = { path = "testapi" }
 dotenvy = "0.15.7"
-actix-multipart = "0.6.1"
+actix-multipart = { version = "0.6.1", features = ["tempfile"] }

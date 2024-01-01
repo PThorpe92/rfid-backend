@@ -56,6 +56,9 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
       const file = field.files[0];
       const data = new FormData();
       data.append("file", file);
+      data.append("filename", file.name);
+      data.append("type", "image/jpeg");
+      data.append("size", file.size.toString());
       setUploadFile(data);
     }
   };
