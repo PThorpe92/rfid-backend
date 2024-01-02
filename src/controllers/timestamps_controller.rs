@@ -1,17 +1,17 @@
 use crate::{
     app_config::DB,
     models::response::Response,
-    models::timestamps::{PostTimestamp, RangeParams, ResidentTimestamp},
+    models::timestamps::{PostTimestamp, RangeParams},
 };
-use actix_web::{get, http::header::ContentType, post, web, HttpResponse, Responder};
+use actix_web::{get, http::header::ContentType, post, web, HttpResponse};
 use entity::{
     residents::{self, Entity as Resident},
-    timestamps::{self, Entity as Timestamp},
+    timestamps::{self, Entity as Timestamp, ResidentTimestamp},
 };
 use reqwest::StatusCode;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter, Set,
-    TryIntoModel,
+    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter,
+    QuerySelect, QueryTrait, RelationTrait, Set, TryIntoModel,
 };
 use serde::Deserialize;
 
@@ -22,21 +22,32 @@ pub struct FilterOpts {
     pub page: Option<u64>,
     pub all: Option<bool>,
     pub range: Option<String>,
+    pub location: Option<i32>,
+    pub rfid: Option<String>,
 }
 
 #[rustfmt::skip]
+
 #[get("/api/timestamps")]
-pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<FilterOpts>) -> impl Responder {
-    let query_params = query_params.into_inner();
-    let per_page = query_params.per_page.unwrap_or(10);
-    let page = query_params.page.unwrap_or(1);
+pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
-    let paginator = Timestamp::find().paginate(db, per_page);
-    let ts = paginator.fetch_page(page - 1).await.unwrap_or(Vec::new());
-    let total_pages = paginator.num_pages().await.unwrap_or(0);
-    HttpResponse::Ok()
-                .content_type(ContentType::json())
-                .json(Response::from_paginator(total_pages, ts))
+    let query_params = query_params.into_inner();
+    let page = query_params.page.unwrap_or(1);
+    let per_page = query_params.per_page.unwrap_or(10);
+    let mut query = Timestamp::find();
+    if let Some(true) = query_params.unique {
+        query = query.distinct_on([timestamps::Column::Rfid, timestamps::Column::Location]);
+    }
+    if let Some(rfid) = query_params.rfid {
+        query = query.filter(timestamps::Column::Rfid.eq(rfid));
+    }
+    if let Some(location) = query_params.location {
+        query = query.filter(timestamps::Column::Location.eq(location));
+    }
+    let paginator = query.paginate(db, per_page);
+    let get_page = paginator.num_pages().await?;
+    let response = Response::<timestamps::Model>::from_paginator(get_page, paginator.fetch_page(page - 1).await?);
+    Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
 }
 
 /// POST: /api/timestamps/{timestamp}
@@ -63,7 +74,7 @@ pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTi
                 };
                 let new_ts = new_timestamp.save(db).await?;
 
-                let response = Response::<ResidentTimestamp>::from_data(ResidentTimestamp {
+                let response = Response::<crate::models::timestamps::ResidentTimestamp>::from_data(crate::models::timestamps::ResidentTimestamp {
                     resident: updated_resident.try_into_model().unwrap(),
                     timestamp: new_ts.try_into_model().unwrap(),
                 });

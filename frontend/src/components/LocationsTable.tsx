@@ -79,6 +79,7 @@ function LocationsTable(props: LocationTableProps): JSXElement {
         <table class="table w-full">
           <thead>
             <tr>
+              <th />
               <th>ID</th>
               <th>Name</th>
               <th></th>
@@ -97,8 +98,10 @@ function LocationsTable(props: LocationTableProps): JSXElement {
                     )
                   }
                 >
+                  <td />
                   <td class="table-cell">{location.id}</td>
                   <td class="table-cell">{location.name}</td>
+                  <td />
                   <td class="table-cell">{location.level}</td>
                 </tr>
               )}

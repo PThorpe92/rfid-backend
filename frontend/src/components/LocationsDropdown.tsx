@@ -20,7 +20,7 @@ function LocationsDropdown(props: LocationModalProps): JSXElement {
   return (
     <>
       <div class="dropdown">
-        <ul class="menu flex  bg-base-200 w-56 rounded-box"
+        <ul class="menu flex  bg-base-200 w-100 rounded-box"
           tabindex="0">
           {props.locations.map((location) => (
             <li accessKey={location.id.toString()}>

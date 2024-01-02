@@ -1,22 +1,38 @@
 import { createSignal, For, JSXElement, Show, onMount } from "solid-js";
-import AddResident from "./AddResident"; // Import your AddResident component
-import { ExitType, SResident } from "../models/models";
+import AddResident from "./AddResident";
+import { ExitType, SResident, SLocation } from "../models/models";
 import { API } from "../api/api";
 import EditResident from "./EditResident";
 import { toast, Toaster } from "solid-toast";
+import AddPhoto from "../components/AddPhoto";
 
 export interface ResidentsTableProps {
   residents: SResident[];
+  locations: SLocation[];
   onRefresh: () => void;
   onClose: () => void;
+  currentScanLocation: number;
 }
 
 function ResidentsTable(props: ResidentsTableProps): JSXElement {
+  const [allLocations, setAllLocations] = createSignal<SLocation[]>(props.locations);
   const [selectedResident, setSelectedResident] =
     createSignal<SResident | null>(null);
   const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
+  const [showUploadPhoto, setShowUploadPhoto] = createSignal(false);
   const [showUpdateResident, setShowUpdateResident] = createSignal(false);
   const [showDeleteResident, setShowDeleteResident] = createSignal(false);
+  const [currentScanLocation, setCurrentScanLocation] = createSignal<number>(props.currentScanLocation);
+  const [location, setLocation] = createSignal(0);
+  const [selectedResidentDoc, setSelectedResidentDoc] = createSignal<string>("");
+
+  const lookupLocation = (locationId: number): SLocation => {
+    if (allLocations() === undefined || allLocations().length === 0) {
+      return { id: locationId, name: `${locationId}`, level: 1 };
+    } else {
+      return allLocations().find((location) => location.id === locationId)!;
+    }
+  };
 
   const getAllResidents = async () => {
     const res = await API.GET("residents?all=true");
@@ -25,24 +41,45 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
     }
   };
 
+  let currentScanLoc = localStorage.getItem("locationId");
+  if (currentScanLoc !== null) {
+    setLocation(parseInt(currentScanLoc, 10));
+  }
+
   const handleSelectResident = (resident: SResident) => {
     setSelectedResident(resident);
+    setSelectedResidentDoc(resident.doc);
   };
 
-  const handleCloseResidentUpdate = (success: ExitType) => {
-    switch (success) {
-      case ExitType.Success:
-        toast.success("Resident updated successfully.");
-        break;
-      case ExitType.Error:
-        toast.error("Resident update failed, please try again.");
-        break;
-      case ExitType.Cancel:
-        toast("Resident update cancelled.");
-        break;
-    }
-    setSelectedResident(null);
+  const handleCloseModal = (success: ExitType[]) => {
+    success.map(s => {
+      switch (s) {
+        case ExitType.Success:
+          toast.success("Resident updated successfully.");
+          break;
+        case ExitType.Error:
+          toast.error("Resident update failed, please try again.");
+          break;
+        case ExitType.Cancel:
+          toast("Resident update cancelled.");
+          break;
+        case ExitType.ImageSuccess:
+          toast.success("Image uploaded successfully.");
+          break;
+        case ExitType.ImageError:
+          toast.error("Image upload failed, please try again.");
+          break;
+        case ExitType.Cancel:
+          toast("Image upload cancelled.");
+          break;
+      }
+    });
+  }
+
+  const handleCloseResidentUpdate = (success: ExitType[]) => {
+    handleCloseModal(success);
     setShowUpdateResident(false);
+    setSelectedResident(null);
   };
 
   const handleEdit = () => {
@@ -58,6 +95,17 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
       setSelectedResident(null);
     }
   };
+
+  const handleShowUploadPhoto = () => {
+    setSelectedResidentDoc(selectedResident()?.doc!);
+    setShowUploadPhoto(true);
+    setSelectedResident(null);
+  };
+
+  const handleCloseAddPhoto = (success: ExitType) => {
+    handleCloseResidentUpdate([success]);
+    setShowUploadPhoto(false);
+  }
 
   const handleShowDelete = () => {
     setShowDeleteResident(true);
@@ -75,6 +123,7 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
         <table class="table ">
           <thead>
             <tr>
+              <th>Img</th>
               <th>Name</th>
               <th>DOC</th>
               <th>Room</th>
@@ -88,15 +137,33 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
               {(resident) => (
                 <tr
                   class="hover cursor-pointer"
-                  classList={{ 'bg-secondary-100': resident.current_location !== parseInt(localStorage.getItem("locationId")!, 10) }}
+                  classList={{
+                    'bg-base-300': currentScanLocation() === 0,
+                    'bg-secondary-content': resident.current_location !== currentScanLocation(),
+                    'bg-neutral': resident.unit === currentScanLocation() && resident.current_location !== currentScanLocation(),
+                    'bg-base-100': resident.unit !== currentScanLocation() && resident.current_location === currentScanLocation(),
+                  }}
                   onClick={() => handleSelectResident(resident)}
                 >
-                  <td>{resident.name}</td>
-                  <td>{resident.doc}</td>
-                  <td>{resident.room}</td>
-                  <td>{resident.unit}</td>
-                  <td>{resident.level}</td>
-                  <td>{resident.current_location}</td>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <div class="avatar avatar-rounded">
+                        <div class="mask mask-squircle w-12 h-12">
+                          <img
+                            src={`/imgs/${resident.doc}.jpg`}
+                            onError={(e) => e.currentTarget.src = '/imgs/default.jpg'}
+                            class="w-12 h-12 object-cover"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-l">{resident.name}</td>
+                  <td class="text-l">{resident.doc}</td>
+                  <td class="text-l">{resident.room}</td>
+                  <td class="text-l">{resident.unit}</td>
+                  <td class="text-l">{resident.level}</td>
+                  <td class="text-l">{lookupLocation(resident.current_location).name}</td>
                 </tr>
               )}
             </For>
@@ -104,24 +171,11 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
         </table>
         <br />
         <br />
-        <Toaster
-          position="top-center"
-          gutter={8}
-          containerClassName=""
-          toastOptions={{
-            className: "",
-            duration: 3000,
-            style: {
-              background: "#2b2b2b",
-              color: "#02eb48",
-            },
-          }}
-        />
         <Show when={selectedResident()}>
           <div class="modal modal-open">
             <div class="modal-box">
               <div class="modal-title">
-                <img src={`/imgs/${selectedResident()!.doc}.jpg`} alt="Resident Photo" />
+                <img src={`/imgs/${selectedResident()!.doc}.jpg`} />
                 <div class="font-mono text-xl">Name: {selectedResident()!.name}</div>
                 <div class="font-mono text-xl">DOC#: {selectedResident()!.doc}</div>
                 <div class="font-mono text-xl">Pod/Room/Bunk: {selectedResident()!.room}</div>
@@ -135,6 +189,9 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
                   </button>
                   <button class="btn btn-error" onClick={handleShowDelete}>
                     Delete
+                  </button>
+                  <button class="btn btn-outline" onClick={handleShowUploadPhoto}>
+                    Upload Photo
                   </button>
                   <button class="btn btn-outline" onClick={() => setSelectedResident(null)}>
                     Cancel
@@ -187,6 +244,12 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
         <button class="btn btn-outline mt-4" onClick={() => props.onClose()}>
           Close
         </button>
+        <Show when={showUploadPhoto()}>
+          <AddPhoto
+            residentDoc={selectedResidentDoc()}
+            onClose={handleCloseAddPhoto}
+          />
+        </Show>
       </div>
     </div>
   );

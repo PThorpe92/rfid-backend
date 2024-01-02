@@ -14,6 +14,12 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     roomNumber: string;
     bunk: "T" | "B";
   }
+  const [formErrors, setFormErrors] = createSignal({
+    rfid: "",
+    name: "",
+    doc: "",
+  });
+
   const [uploadFile, setUploadFile] = createSignal<FormData>(new FormData);
   const [editRoom, setEditRoom] = createSignal<buildRoom>({
     pod: "A",
@@ -27,8 +33,8 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     name: "",
     doc: "",
     room: "",
-    unit: 0,
-    level: 0,
+    unit: 1,
+    level: 2,
   });
 
   const roomLetters = ["A", "B", "C"];
@@ -37,6 +43,29 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
   const bunkPositions = ["Top", "Bottom"];
   const levels = Array.from({ length: 5 }, (_, i) => i + 1);
 
+  const validateForm = () => {
+    let errors = { rfid: "", name: "", doc: "" };
+    let isValid = true;
+
+    // Validate RFID (17 digits)
+    if (!/^\d{17}$/.test(newResident().rfid)) {
+      errors.rfid = "RFID must be 17 digits.";
+      isValid = false;
+    }
+    // Validate Name (two words, no numbers)
+    if (!/^[A-Za-z]+ [A-Za-z]+$/.test(newResident().name)) {
+      errors.name = "Name must be two words, no numbers.";
+      isValid = false;
+    }
+
+    // Validate DOC (all numbers, no more than 10 digits)
+    if (!/^\d{1,10}$/.test(newResident().doc)) {
+      errors.doc = "DOC must be all numbers and no more than 10 digits.";
+      isValid = false;
+    }
+    setFormErrors(errors);
+    return isValid;
+  };
   const updateRoom = (field: keyof buildRoom, value: string | number) => {
     if (field === 'bunk' && value === 'Top') {
       setEditRoom({ ...editRoom(), bunk: 'T' });
@@ -50,6 +79,7 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
   // handle file upload. pictures are stored on the front end 
   // in the /imgs folder and are named the residents DOC#.jpg
   const handleFileUpload = (e: any) => {
+    adre
     const field = e.target;
     if (field.files.length > 0) {
       console.log("file found!")
@@ -87,6 +117,9 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
     const buildRoom = editRoom();
     setNewResident({
       ...newResident(),
@@ -115,88 +148,98 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     <div>
       <div class="modal modal-open">
         <div class="modal-box">
-          <h3 class="font-bold text-lg">New Resident</h3>
-
-          <input
-            type="text"
-            placeholder="RFID (please scan tag)"
-            class="input input-bordered w-full max-w-xs"
-            onInput={(e) => updateField("rfid", e.currentTarget.value)}
-          />
-          <input
-            type="text"
-            placeholder="Name"
-            class="input input-bordered w-full max-w-xs"
-            onInput={(e) => updateField("name", e.currentTarget.value)}
-          />
-          <input
-            type="text"
-            placeholder="Doc#"
-            class="input input-bordered w-full max-w-xs"
-            onInput={(e) => updateField("doc", e.currentTarget.value)}
-          />
-          {/* We'll get the Character for the unit and convert to ID */}
-          <div class="grid grid-cols-3 gap-4">
-            <label class="label">Unit</label>
-            <select
-              class="select select-bordered"
-              onChange={(e) => updateUnit(e.currentTarget.value)}
-            >
-              {unitLetters.map((letter) => (
-                <option value={letter}>{letter}</option>
-              ))}
-            </select>
-            {/* Dropdowns for room selection */}
-            <label class="label">Pod</label>
-            <select
-              class="select select-bordered"
-              onChange={(e) => updateRoom("pod", e.currentTarget.value)}
-            >
-              {roomLetters.map((letter) => (
-                <option value={letter}>{letter}</option>
-              ))}
-            </select>
-            <label class="label">Room #</label>
-            <select
-              class="select select-bordered"
-              onChange={(e) => updateRoom("roomNumber", e.currentTarget.value)}
-            >
-              {roomNumbers.map((number) => (
-                <option value={number}>{number}</option>
-              ))}
-            </select>
-            <label class="label">Bunk</label>
-            <select
-              class="select select-bordered"
-              onChange={(e) => updateRoom("bunk", e.currentTarget.value)}
-            >
-              {bunkPositions.map((position) => (
-                <option value={position}>{position}</option>
-              ))}
-            </select>
-            <label class="label">Level</label>
-            <select
-              class="select select-bordered"
-              onInput={(e) =>
-                updateField("level", parseInt(e.currentTarget.value))
-              }
-            >
-              {levels.map((level) => (
-                <option value={level}>{level}</option>
-              ))}
-            </select>
-          </div>
-          <label class="label label-outline justify-center">Upload Image</label>
-          <div class="modal-action">
-            <input type="file" onChange={handleFileUpload} class="file-input file-input-bordered file-input-accent w-full max-w-xs" />
-          </div>
-          <div class="modal-action">
-            <button class="btn" onClick={handleSubmit}>
-              Submit
-            </button>
-            <button class="btn btn-outline" onClick={() => props.onClose()}>
-              Cancel
-            </button>
+          <div class="grid grid-flow-row auto-rows-max md:auto-rows-min">
+            <h3 class="font-bold text-lg">New Resident</h3>
+            <Show when={formErrors().rfid}>
+              <div class="text-red-500">{formErrors().rfid}</div>
+            </Show>
+            <Show when={formErrors().name}>
+              <div class="text-red-500">{formErrors().name}</div>
+            </Show>
+            <Show when={formErrors().doc}>
+              <div class="text-red-500">{formErrors().doc}</div>
+            </Show>
+            <input
+              type="text"
+              placeholder="RFID (please scan tag)"
+              class="input input-bordered w-full max-w-xs"
+              onInput={(e) => updateField("rfid", e.currentTarget.value)}
+            />
+            <input
+              type="text"
+              placeholder="Name"
+              class="input input-bordered w-full max-w-xs"
+              onInput={(e) => updateField("name", e.currentTarget.value)}
+            />
+            <input
+              type="text"
+              placeholder="Doc#"
+              class="input input-bordered w-full max-w-xs"
+              onInput={(e) => updateField("doc", e.currentTarget.value)}
+            />
+            {/* We'll get the Character for the unit and convert to ID */}
+            <div class="grid grid-flow-row">
+              <div class="label">{"Unit"}</div>
+              <select
+                class="select select-bordered"
+                onChange={(e) => updateUnit(e.currentTarget.value)}
+              >
+                {unitLetters.map((letter) => (
+                  <option value={letter}>{letter}</option>
+                ))}
+              </select>
+              {/* Dropdowns for room selection */}
+              <label class="label">Pod</label>
+              <select
+                class="select select-bordered"
+                onChange={(e) => updateRoom("pod", e.currentTarget.value)}
+              >
+                {roomLetters.map((letter) => (
+                  <option value={letter}>{letter}</option>
+                ))}
+              </select>
+              <label class="label">Room #</label>
+              <select
+                class="select select-bordered"
+                onChange={(e) => updateRoom("roomNumber", e.currentTarget.value)}
+              >
+                {roomNumbers.map((number) => (
+                  <option value={number}>{number}</option>
+                ))}
+              </select>
+              <label class="label">Bunk</label>
+              <select
+                class="select select-bordered"
+                onChange={(e) => updateRoom("bunk", e.currentTarget.value)}
+              >
+                {bunkPositions.map((position) => (
+                  <option value={position}>{position}</option>
+                ))}
+              </select>
+              <label class="label">Level</label>
+              <select
+                class="select select-bordered"
+                onInput={(e) =>
+                  updateField("level", parseInt(e.currentTarget.value))
+                }
+              >
+                {levels.map((level) => (
+                  <option value={level}>{level}</option>
+                ))}
+              </select>
+            </div>
+            <label class="label label-outline justify-center">Upload Image</label>
+            <div class="modal-action">
+              <input type="file" onChange={handleFileUpload} class="file-input file-input-bordered file-input-accent w-full max-w-xs" />
+            </div>
+            <div class="modal-action">
+              <button class="btn" onClick={handleSubmit}>
+                Submit
+              </button>
+              <button class="btn btn-outline" onClick={() => props.onClose()}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>

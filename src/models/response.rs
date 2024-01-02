@@ -6,7 +6,6 @@ use std::fmt::Formatter;
 
 impl Serializable for PostTimestamp {}
 impl Serializable for ResidentTimestamp {}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Response<T> {
     pub success: bool,
@@ -56,6 +55,13 @@ where
             success: true,
             message: msg.to_string(),
             data: None,
+        }
+    }
+    pub fn from_join(data: Vec<(T, T)>) -> Self {
+        Self {
+            success: true,
+            message: "Data successfully retrieved".to_string(),
+            data: Some(data.into_iter().flat_map(|(a, b)| vec![a, b]).collect()),
         }
     }
     pub fn from_error(msg: &str) -> Self {

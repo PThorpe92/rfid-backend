@@ -26,6 +26,7 @@ pub struct LocationRange {
 #[derive(Debug, Deserialize)]
 pub struct Params {
     pub current: Option<bool>,
+    pub active_scan: Option<bool>,
 }
 
 // Deserialize date strings into NaiveDate
@@ -178,21 +179,40 @@ pub async fn show_location_timestamps(db: web::Data<DB>, id: web::Path<Id>, quer
 pub async fn show_location_residents(db: web::Data<DB>, id: web::Path<Id>, curr: web::Query<Params>) -> impl Responder  {
     let db = &db.0;
     let id = id.into_inner().location_id;
-    if curr.into_inner().current.is_some_and(|c| c) {
+    let curr = curr.into_inner();
+    
+    // get ONLY the residents who are currently at the scan location (useful for Monitors)
+    if curr.current.is_some_and(|c| c) {
         let residents: Vec<residents::Model> = Residents::find()
             .filter(residents::Column::CurrentLocation.eq(id))
             .all(db)
             .await.unwrap_or(Vec::new());
         let response: Response<residents::Model> = Response::from_vec(residents);
         HttpResponse::Ok().insert_header(ContentType::json()).json(response)
-    } else {
+    } else if curr.active_scan.is_some_and(|c| c) {
+        
+        // get all residents who live at the unit, as well as those who are currently at the unit (i.e. have scanned in)
         let residents: Vec<residents::Model> = Residents::find()
-            .filter(residents::Column::Unit.eq(id))
+            .filter(residents::Column::Unit.eq(id).or(residents::Column::CurrentLocation.eq(id)))
             .all(db)
             .await.unwrap_or(Vec::new());
         HttpResponse::Ok().insert_header(ContentType::json()).json(Response::from_vec(residents))
+    } else {
+        
+        // get all residents who live at the unit, (useful for admin page/reports)
+        let residents = Residents::find()
+            .filter(residents::Column::Unit.eq(id))
+            .all(db)
+            .await.unwrap_or(Vec::new());
+        if residents.is_empty() {
+            HttpResponse::Ok().insert_header(ContentType::json()).json(Response::<String>::from_error("Error retrieving residents"))
+        } else {
+            let response: Response<residents::Model> = Response::from_vec(residents);
+            HttpResponse::Ok().insert_header(ContentType::json()).json(response)
+        }
     }
 }
+
 #[rustfmt::skip]
 #[delete("/api/locations/{location_id}")]
 pub async fn destroy(db: web::Data<DB>, id: web::Path<Id>) -> impl Responder {

@@ -4,7 +4,7 @@ import { API } from "../api/api";
 import { ExitType } from "../models/models";
 interface EditResidentModalProps {
   resident: SResident;
-  onClose: (success: ExitType) => void;
+  onClose: (success: ExitType[]) => void;
 }
 
 function EditResidentModal(props: EditResidentModalProps): JSXElement {
@@ -26,6 +26,7 @@ function EditResidentModal(props: EditResidentModalProps): JSXElement {
   const [editRoom, setEditRoom] = createSignal<buildRoom>(getBuildRoom());
   const [rfid, setRfid] = createSignal<string>(props.resident.rfid);
   const podLetters = ["A", "B", "C"];
+  const [exitStatus, setExitStatus] = createSignal<ExitType[]>([]);
   const roomNumbers = Array.from({ length: 20 }, (_, i) => i + 1);
   const bunkPositions = ["Top", "Bottom"];
   const levels = Array.from({ length: 5 }, (_, i) => i + 1);
@@ -34,10 +35,12 @@ function EditResidentModal(props: EditResidentModalProps): JSXElement {
     rfid: "",
     name: "",
     doc: "",
+    file: "",
   });
+  const [uploadFile, setUploadFile] = createSignal<FormData>(new FormData);
 
   const validateForm = () => {
-    let errors = { rfid: "", name: "", doc: "" };
+    let errors = { rfid: "", name: "", doc: "", file: "" };
     let isValid = true;
 
     // Validate RFID (17 digits)
@@ -56,6 +59,7 @@ function EditResidentModal(props: EditResidentModalProps): JSXElement {
       errors.doc = "DOC must be all numbers and no more than 10 digits.";
       isValid = false;
     }
+
     setFormErrors(errors);
     return isValid;
   };
@@ -72,6 +76,22 @@ function EditResidentModal(props: EditResidentModalProps): JSXElement {
         return "B";
       default:
         return "T";
+    }
+  };
+
+  // handle file upload. pictures are stored on the front end 
+  // in the /imgs folder and are named the residents DOC#.jpg
+  const handleFileUpload = (e: any) => {
+    const field = e.target;
+    if (field.files.length > 0) {
+      console.log("file found!")
+      const file = field.files[0];
+      const data = new FormData();
+      data.append("file", file);
+      data.append("filename", file.name);
+      data.append("type", "image/jpeg");
+      data.append("size", file.size.toString());
+      setUploadFile(data);
     }
   };
 
@@ -117,7 +137,8 @@ function EditResidentModal(props: EditResidentModalProps): JSXElement {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    let status = exitStatus();
     if (validateForm()) {
       const buildRoom = editRoom();
       setEditingResident({
@@ -125,119 +146,136 @@ function EditResidentModal(props: EditResidentModalProps): JSXElement {
         room: `${buildRoom.pod}-${buildRoom.roomNumber}${buildRoom.bunk}`,
       });
       // Replace with your API PATCH call
-      API.PATCH(`residents/${rfid()}`, editingResident())
-        .then((response) => {
-          if (response && response.success) {
-            props.onClose(ExitType.Success);
-          }
-        })
-        .catch((error) => {
-          props.onClose(ExitType.Error);
-          console.log(error);
-        });
+      let response = await API.PATCH(`residents/${rfid()}`, editingResident());
+      if (response && response?.success) {
+        status.push(ExitType.Success);
+      } else {
+        status.push(ExitType.Error)
+      }
     }
-  };
+    if (uploadFile() !== null) {
+      let resp = await API.UPLOAD(`residents/${editingResident().doc}/upload`, uploadFile());
+      if (resp !== undefined && resp.success) {
+        status.push(ExitType.ImageSuccess);
+      } else {
+        status.push(ExitType.Error);
+      }
+    }
+    setExitStatus(status);
+    props.onClose(exitStatus());
+  }
+  const handleCancel = () => {
+    let status = exitStatus();
+    status.push(ExitType.Cancel);
+    setExitStatus(status);
+    props.onClose(exitStatus());
+  }
 
   return (
     <div class="modal modal-open">
       <div class="modal-box">
-        <h3 class="font-bold text-lg">Edit Resident</h3>
-        <Show when={formErrors().rfid}>
-          <div class="text-red-500">{formErrors().rfid}</div>
-        </Show>
-        <Show when={formErrors().name}>
-          <div class="text-red-500">{formErrors().name}</div>
-        </Show>
-        <Show when={formErrors().doc}>
-          <div class="text-red-500">{formErrors().doc}</div>
-        </Show>
-        {/* Input fields for resident details */}
-        <label class="label">RFID</label>
-        <input
-          type="text"
-          value={editingResident().rfid}
-          class="input input-bordered w-full max-w-xs"
-          onInput={(e) => updateField("rfid", e.currentTarget.value)}
-        />
-        <label class="label">Full Name (Last, First)</label>
-        <input
-          type="text"
-          value={editingResident().name}
-          class="input input-bordered w-full max-w-xs"
-          onInput={(e) => updateField("name", e.currentTarget.value)}
-        />
-        <label class="label">DOC #</label>
-        <input
-          type="text"
-          value={editingResident().doc}
-          class="input input-bordered w-full max-w-xs"
-          onInput={(e) => updateField("doc", e.currentTarget.value)}
-        />
-        <div class="flex grid grid-cols-2">
-          <label class="label">Unit</label>
-          <select
-            class="select select-bordered"
-            value={determineUnit(editingResident().unit)}
-            onInput={(e) => updateUnit(e.currentTarget.value)}
-          >
-            {unitLetters.map((letter) => (
-              <option value={letter}>{letter}</option>
-            ))}
-          </select>
-          <label class="label">Level</label>
-          <select
-            class="select select-bordered"
-            value={editingResident().level}
-            onChange={(e) =>
-              updateField("level", parseInt(e.currentTarget.value, 10))
-            }
-          >
-            {levels.map((level) => (
-              <option value={level}>{level}</option>
-            ))}
-          </select>
-          <label class="label">Pod</label>
-          <select
-            class="select select-bordered"
-            value={editRoom().pod}
-            onChange={(e) => updateBuildRoom("pod", e.currentTarget.value)}
-          >
-            {podLetters.map((letter) => (
-              <option value={letter}>{letter}</option>
-            ))}
-          </select>
-          <label class="label">Room#</label>
-          <select
-            class="select select-bordered"
-            value={editRoom().roomNumber}
-            onChange={(e) =>
-              updateBuildRoom("roomNumber", e.currentTarget.value.toString())
-            }
-          >
-            {roomNumbers.map((number) => (
-              <option value={number}>{number}</option>
-            ))}
-          </select>
-          <label class="label">Bunk</label>
-          <select
-            class="select select-bordered"
-            onChange={(e) => updateBuildRoom("bunk", e.currentTarget.value)}
-          >
-            {bunkPositions.map((position) => (
-              <option value={position}>{position}</option>
-            ))}
-          </select>
-        </div>
-        <div class="modal-action">
-          <button
-            class="btn btn-outline"
-            onClick={() => props.onClose(ExitType.Cancel)}
-          >
-            Cancel
-          </button>
-          <button class="btn btn-primary" onClick={handleSubmit}>
-            Update
-          </button>
+        <div class="grid grid-flow-row auto-rows-max md:auto-rows-min">
+          <h3 class="font-bold text-lg">Edit Resident</h3>
+          <Show when={formErrors().rfid}>
+            <div class="text-red-500">{formErrors().rfid}</div>
+          </Show>
+          <Show when={formErrors().name}>
+            <div class="text-red-500">{formErrors().name}</div>
+          </Show>
+          <Show when={formErrors().doc}>
+            <div class="text-red-500">{formErrors().doc}</div>
+          </Show>
+          {/* Input fields for resident details */}
+          <label class="label">RFID</label>
+          <input
+            type="text"
+            value={editingResident().rfid}
+            class="input input-bordered w-full max-w-xs"
+            onInput={(e) => updateField("rfid", e.currentTarget.value)}
+          />
+          <label class="label">Full Name (Last, First)</label>
+          <input
+            type="text"
+            value={editingResident().name}
+            class="input input-bordered w-full max-w-xs"
+            onInput={(e) => updateField("name", e.currentTarget.value)}
+          />
+          <label class="label">DOC #</label>
+          <input
+            type="text"
+            value={editingResident().doc}
+            class="input input-bordered w-full max-w-xs"
+            onInput={(e) => updateField("doc", e.currentTarget.value)}
+          />
+          <div class="grid grid-flow-row">
+            <label class="label">Unit</label>
+            <select
+              class="select select-bordered"
+              value={determineUnit(editingResident().unit)}
+              onInput={(e) => updateUnit(e.currentTarget.value)}
+            >
+              {unitLetters.map((letter) => (
+                <option value={letter}>{letter}</option>
+              ))}
+            </select>
+            <label class="label">Level</label>
+            <select
+              class="select select-bordered"
+              value={editingResident().level}
+              onChange={(e) =>
+                updateField("level", parseInt(e.currentTarget.value, 10))
+              }
+            >
+              {levels.map((level) => (
+                <option value={level}>{level}</option>
+              ))}
+            </select>
+            <label class="label">Pod</label>
+            <select
+              class="select select-bordered"
+              value={editRoom().pod}
+              onChange={(e) => updateBuildRoom("pod", e.currentTarget.value)}
+            >
+              {podLetters.map((letter) => (
+                <option value={letter}>{letter}</option>
+              ))}
+            </select>
+            <label class="label">Room#</label>
+            <select
+              class="select select-bordered"
+              value={editRoom().roomNumber}
+              onChange={(e) =>
+                updateBuildRoom("roomNumber", e.currentTarget.value.toString())
+              }
+            >
+              {roomNumbers.map((number) => (
+                <option value={number}>{number}</option>
+              ))}
+            </select>
+            <label class="label">Bunk</label>
+            <select
+              class="select select-bordered"
+              onChange={(e) => updateBuildRoom("bunk", e.currentTarget.value)}
+            >
+              {bunkPositions.map((position) => (
+                <option value={position}>{position}</option>
+              ))}
+            </select>
+            <div class="modal-action">
+              <input type="file" onChange={handleFileUpload} class="file-input file-input-bordered file-input-accent w-full max-w-xs" />
+            </div>
+          </div>
+          <div class="modal-action">
+            <button
+              class="btn btn-outline"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+            <button class="btn btn-primary" onClick={handleSubmit}>
+              Update
+            </button>
+          </div>
         </div>
       </div>
     </div>

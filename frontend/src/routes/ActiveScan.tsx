@@ -34,12 +34,36 @@ function ActiveScan() {
   const ENTER_KEY = "Enter";
   const INPUT_TIMEOUT = 100;
 
+  const PAGE_SIZE = 10; // Set your desired page size
+  const [currentPage, setCurrentPage] = createSignal(1);
+
+  const getSortedResidents = () => {
+    const locationId = currentScanLocation();
+    return residents()
+      .sort((a, b) => {
+        if (b.current_location === locationId && b.unit !== locationId) {
+          return 1; // b should come before a
+        }
+        if (a.current_location !== locationId && a.unit === locationId) {
+          return -1; // a should come before b
+        }
+        return 0; // no change in order
+      });
+  };
+
+  const paginatedResidents = () => {
+    const startIndex = (currentPage() - 1) * PAGE_SIZE;
+    return getSortedResidents().slice(startIndex, startIndex + PAGE_SIZE);
+  };
+
   const handleAddResidentClose = () => {
+    initRFIDScanner();
     hiddenInput.focus();
     setShowAddResident(false);
   };
 
   const handleShowAddResident = () => {
+    detachRFIDScanner();
     hiddenInput.blur();
     setShowAddResident(true);
   };
@@ -71,6 +95,9 @@ function ActiveScan() {
               toast.success(
                 `Resident ${resident.resident.name} is now at ${resident.resident.current_location}`,
               );
+              let updatedResidents = residents().filter((res: SResident) => res.rfid !== resident.resident.rfid);
+              updatedResidents.push(resident.resident);
+              setResidents(updatedResidents);
               setLastResidentScanned(resident.resident);
             }
           } else {
@@ -87,6 +114,9 @@ function ActiveScan() {
           toast.success(
             `Resident ${resident.resident.name} is now at ${resident.resident.current_location}`,
           );
+          let updatedResidents = residents().filter((res: SResident) => res.rfid !== resident.resident.rfid);
+          updatedResidents.push(resident.resident);
+          setResidents(updatedResidents);
           setLastResidentScanned(resident.resident);
         }
       } else {
@@ -97,6 +127,7 @@ function ActiveScan() {
     }
   };
 
+  // ******* RFID Scanner Logic *********
   const scanEvent = (event: KeyboardEvent) => {
     const currentTime = new Date().getTime();
 
@@ -125,6 +156,10 @@ function ActiveScan() {
     window.addEventListener('keydown', scanEvent);
   };
 
+  const detachRFIDScanner = () => {
+    window.removeEventListener('keydown', scanEvent);
+  }
+
   const getAllLocations = () => {
     API.GET(`locations?all=true`)
       .then((res) => setAllLocations(res?.data as SLocation[]))
@@ -132,34 +167,37 @@ function ActiveScan() {
   };
 
   const getAllResidents = async () => {
-    const res = await API.GET("residents?all=true");
+    const res = await API.GET("residents");
     if (res?.data) {
       setAllResidents(res.data as SResident[]);
     }
   }
 
-  const refetchData = async () => {
+  const refetchData = () => {
     try {
-      await getAllResidents();
-      setResidents(getResidentsByLocation(currentScanLocation()));
+      getResidentsByLocation(currentScanLocation());
     } catch (error) {
       console.error("Error fetching residents:", error);
     }
   };
 
-  const handleLocationChange = (locationId: number) => {
+  const handleLocationChange = async (locationId: number) => {
     setCurrentScanLocation(locationId);
-    setResidents(getResidentsByLocation(locationId));
+    await getResidentsByLocation(locationId);
     localStorage.setItem("locationId", locationId.toString());
     setShowModal(false);
     setShowTable(true);
     initRFIDScanner();
   };
 
-  const getResidentsByLocation = (locationId: number): SResident[] => {
-    return allResidents()!.filter(resident => resident.unit === locationId).length === 0
-      ? allResidents()?.filter(resident => resident.current_location === locationId)
-      : allResidents()?.filter(resident => resident.unit === locationId || resident.current_location === locationId);
+  const getResidentsByLocation = async (locationId: number) => {
+    await API.GET(`locations/${locationId}/residents?active_scan=true`).then(res => {
+      if (res?.data) {
+        setResidents(res.data as SResident[]);
+      }
+    }).catch(err => {
+      console.error(err)
+    });
   };
 
   const handleCloseTable = () => {
@@ -169,14 +207,17 @@ function ActiveScan() {
   };
 
   onMount(() => {
+    // get all residents to pass to the dropdown box to demonstrate how many are at each unit
     getAllResidents();
+    // get all locations to pass to dropdown box
     getAllLocations();
+    // show the modal to select a location
     setShowModal(true);
     intervalId = setInterval(() => {
       if (currentScanLocation()) {
         refetchData();
       }
-    }, 5000);
+    }, 15000);
   });
 
   onCleanup(() => {
@@ -195,7 +236,7 @@ function ActiveScan() {
         gutter={8}
         containerClassName="badge badge-xl badge-success"
         toastOptions={{
-          className: "",
+          className: "toast",
           duration: 7000,
           style: {
             background: "#2b2b2b",
@@ -219,13 +260,32 @@ function ActiveScan() {
         </div>
       </Show>
       <div>
-        <Show when={showTable()}>
-          <ResidentsTable
-            residents={residents()}
-            onRefresh={refetchData}
-            onClose={handleCloseTable}
-          />
-        </Show>
+        <div>
+          {/* Pagination Controls */}
+          <button
+            onClick={() => setCurrentPage(currentPage() - 1)}
+            disabled={currentPage() === 1}
+          >
+            <div class="btn btn-md">Previous</div>
+          </button>
+          <button
+            onClick={() => setCurrentPage(currentPage() + 1)}
+            disabled={currentPage() * PAGE_SIZE >= getSortedResidents().length}
+          >
+            <div class="btn btn-md">Next</div>
+          </button>
+
+          {/* Residents Table */}
+          <Show when={showTable()}>
+            <ResidentsTable
+              residents={paginatedResidents()}
+              onRefresh={refetchData}
+              locations={allLocations()}
+              currentScanLocation={currentScanLocation()}
+              onClose={handleCloseTable}
+            />
+          </Show>
+        </div>
       </div>
       <button
         class="btn btn-primary mb-4"
@@ -240,6 +300,11 @@ function ActiveScan() {
           onClose={handleAddResidentClose}
         />
       </Show>
+      <div class="justify-center grid grid-flow-col auto-cols-max gap-4">
+        <div class="badge secondary-content">Signed In</div>
+        <div class="badge badge-neutral">Signed Out</div>
+        <div class="badge badge-base-100">Not from Unit</div>
+      </div>
     </>
   );
 }

@@ -5,7 +5,9 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 impl OrmSerializable for Model {}
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, DeriveEntityModel, DeriveRelatedEntity, Eq, Serialize, Deserialize,
+)]
 #[sea_orm(table_name = "timestamps")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -13,6 +15,30 @@ pub struct Model {
     pub rfid: i32,
     pub location: i32,
     pub ts: DateTime,
+}
+
+impl OrmSerializable for ResidentTimestamp {}
+impl OrmSerializable for sea_orm::JsonValue {}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ResidentTimestamp {
+    pub doc: String,
+    pub name: String,
+    pub location: i32,
+    pub ts: DateTime, // Adjust the DateTime type based on your schema
+}
+
+// Implement conversion from the tuple of models to `ResidentTimestamp`
+// Assume we have a tuple like (ResidentModel, LocationModel, TimestampModel)
+impl From<(crate::residents::Model, Model)> for ResidentTimestamp {
+    fn from(tuple: (crate::residents::Model, Model)) -> Self {
+        ResidentTimestamp {
+            doc: tuple.0.doc,
+            name: tuple.0.name,
+            location: tuple.1.location,
+            ts: tuple.1.ts,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

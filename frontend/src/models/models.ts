@@ -6,6 +6,8 @@ export interface SResidentTimestamp {
 
 export enum ExitType {
   Success,
+  ImageError,
+  ImageSuccess,
   Error,
   Cancel,
 }
@@ -32,7 +34,7 @@ export interface STimestamp {
   [key: string]: string | number | undefined;
   rfid: string;
   location: number;
-  time?: string;
+  ts?: string;
 }
 
 export interface ServerResponse {
