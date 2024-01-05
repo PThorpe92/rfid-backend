@@ -1,17 +1,20 @@
 use crate::{
     app_config::DB,
-    models::response::Response,
-    models::timestamps::{PostTimestamp, RangeParams},
+    models::{
+        self,
+        timestamps::{PostTimestamp, RangeParams},
+    },
+    models::{response::Response, timestamps::ResidentTimestamp},
 };
 use actix_web::{get, http::header::ContentType, post, web, HttpResponse};
 use entity::{
     residents::{self, Entity as Resident},
-    timestamps::{self, Entity as Timestamp, ResidentTimestamp},
+    timestamps::{self, Entity as Timestamp},
 };
 use reqwest::StatusCode;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter,
-    QuerySelect, QueryTrait, RelationTrait, Set, TryIntoModel,
+    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set,
+    TryIntoModel,
 };
 use serde::Deserialize;
 
@@ -32,21 +35,36 @@ pub struct FilterOpts {
 pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
     let query_params = query_params.into_inner();
-    let page = query_params.page.unwrap_or(1);
-    let per_page = query_params.per_page.unwrap_or(10);
-    let mut query = Timestamp::find();
-    if let Some(true) = query_params.unique {
-        query = query.distinct_on([timestamps::Column::Rfid, timestamps::Column::Location]);
-    }
-    if let Some(rfid) = query_params.rfid {
-        query = query.filter(timestamps::Column::Rfid.eq(rfid));
-    }
+    let mut query = Timestamp::find()
+        .find_also_related(Resident).filter(residents::Column::IsDeleted.eq(false));
+
     if let Some(location) = query_params.location {
         query = query.filter(timestamps::Column::Location.eq(location));
     }
-    let paginator = query.paginate(db, per_page);
-    let get_page = paginator.num_pages().await?;
-    let response = Response::<timestamps::Model>::from_paginator(get_page, paginator.fetch_page(page - 1).await?);
+    if let Some(range) = query_params.range.clone() {
+        let range: Vec<&str> = range.split(',').collect();
+        if range.len() == 2 {
+            let start_date = range[0];
+            let end_date = range[1];
+            query = query.filter(timestamps::Column::Ts.between(start_date, end_date));
+        }
+    }
+    if let Some(true) = query_params.unique {
+        query = query.distinct_on([(residents::Entity, residents::Column::Id)]);
+    }
+    // Executing the query
+    let result = query.all(db).await?;
+
+    // Mapping the result to the ResidentTimestamp struct
+    let response: Vec<ResidentTimestamp> = result.into_iter().map(|(timestamp, resident)| {
+        let resident: residents::Model = resident.unwrap(); // Handle the unwrap properly in production code
+        let timestamp: timestamps::Model = timestamp;
+        ResidentTimestamp {
+            resident,
+            timestamp
+        }
+    }).collect();
+    let response = Response::<ResidentTimestamp>::from_vec(response);
     Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
 }
 
@@ -93,8 +111,15 @@ pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTi
 pub async fn show_range(db: web::Data<DB>, range: web::Path<RangeParams>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
     let range = range.into_inner();
-    let time: Vec<entity::timestamps::Model>
-    = Timestamp::find().filter(entity::timestamps::Column::Ts.between(range.start_date, range.end_date)).all(db).await?;
-    let response = Response::<timestamps::Model>::from_vec(time);
+    let time = Timestamp::find().find_also_related(Resident).filter(entity::timestamps::Column::Ts.between(range.start_date, range.end_date)).all(db).await?;
+    let result = time.into_iter().map(|(timestamp, resident)| {
+        let resident: residents::Model = resident.unwrap();
+        let timestamp: timestamps::Model = timestamp;
+        ResidentTimestamp {
+            resident,
+            timestamp
+        }
+    }).collect::<Vec<models::timestamps::ResidentTimestamp>>();
+    let response = Response::<models::timestamps::ResidentTimestamp>::from_vec(result);
     Ok(HttpResponse::Ok().content_type(ContentType::json()).json(response))
 }

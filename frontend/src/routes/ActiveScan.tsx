@@ -217,7 +217,7 @@ function ActiveScan() {
       if (currentScanLocation()) {
         refetchData();
       }
-    }, 15000);
+    }, 2000);
   });
 
   onCleanup(() => {

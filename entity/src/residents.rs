@@ -22,7 +22,20 @@ pub struct Model {
     #[serde(skip)]
     pub is_deleted: bool,
 }
+impl OrmSerializable for TimestampResident {}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TimestampResident {
+    pub id: String,
+    pub location: i32,
+    pub ts: DateTime,
 
+    // Fields from the Resident model
+    pub name: String,
+    pub doc: String,
+    pub room: String,
+    pub unit: i32,
+    pub level: i32,
+}
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(

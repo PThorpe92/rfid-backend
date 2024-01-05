@@ -10,33 +10,51 @@ function ViewReports(): JSXElement {
   const [selectedLocation, setSelectedLocation] = createSignal<number | null>(null);
   const [startDate, setStartDate] = createSignal<string>(''); // Format: YYYY-MM-DD
   const [endDate, setEndDate] = createSignal<string>(''); // Format: YYYY-MM-DD
-  const [resTimestamps, setResTimestamps] = createSignal<STimestamp[]>([]);
+  const [resTimestamps, setResTimestamps] = createSignal<SResidentTimestamp[]>([]);
   const [allLocations, setAllLocations] = createSignal<SLocation[]>([]);
   const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
+  const [unique, setUnique] = createSignal<boolean>(false);
+
   const fetchTimestamps = async () => {
-    if (selectedLocation() && startDate() && endDate()) {
-      const response = await API.GET(`locations/${selectedLocation()}/timestamps/${startDate()}/${endDate()}`);
-      if (response?.data) {
-        setResTimestamps(response.data as STimestamp[]);
-      }
-    } else if (startDate() && endDate()) {
-      const response = await API.GET(`timestamps/${startDate()}/${endDate()}`);
-      if (response?.data) {
-        setResTimestamps(response.data as STimestamp[]);
-      }
-    } else {
-      const response = await API.GET('timestamps');
-      if (response?.data) {
-        setResTimestamps(response.data as STimestamp[]);
-      }
+    console.log("fetching timestamps");
+    let urlstring = ``;
+    switch (true) {
+      case (selectedLocation() && startDate() !== '' && endDate() !== ''):
+        urlstring = `timestamps?location=${selectedLocation()}&range=${startDate()}=${endDate()}`;
+        break;
+      case (startDate() !== '' && endDate() !== ''):
+        urlstring = `timestamps?range=${startDate()}-${endDate()}`;
+        break;
+      case (selectedLocation() !== null):
+        urlstring = `timestamps?location=${selectedLocation()}`;
+        break;
+      case (unique()):
+        urlstring = `timestamps?unique=true`;
+        break;
+      default:
+        urlstring = `timestamps`;
+    };
+    let response = await API.GET(urlstring);
+    if (response?.data) {
+      setResTimestamps(response.data as SResidentTimestamp[]);
     }
   };
+  const getLocationName = (locationId: number): string => {
+    if (allLocations() === undefined || allLocations().length === 0) {
+      return `${locationId}`;
+    } else {
+      return allLocations().find((location) => location.id === locationId)!.name;
+    }
+  }
 
   const fetchResidents = async () => {
     const response = await API.GET('residents?all=true');
     if (response?.data) {
       setAllResidents(response.data as SResident[]);
     }
+  }
+  const handleCheckUnique = () => {
+    setUnique(!unique());
   }
   const handleShowLocationsDropdown = () => {
     setShowLocationsDropdown(true);
@@ -73,6 +91,12 @@ function ViewReports(): JSXElement {
             <div class='btn btn-primary mt-4' onClick={handleShowLocationsDropdown}>Select Location</div>
             <button class="btn btn-primary mt-4" onClick={fetchTimestamps}>Fetch Timestamps</button>
             <div class='badge badge-accent badge-lg mt-4' onClick={handleHideLocationsDropdown}>{selectedLocation() ? `Location: ${selectedLocation()}` : 'Select Location'}</div>
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="badge badge-primary badge-lg mt-4">Show Unique Only</span>
+                <input type="checkbox" class="toggle mt-5" onchange={handleCheckUnique} />
+              </label>
+            </div>
           </div>
           <Show when={showLocationsDropdown()}>
             <LocationsDropdown
@@ -83,25 +107,40 @@ function ViewReports(): JSXElement {
             />
           </Show>
         </div>
-
         <div class="col-span-4 overflow-x-auto">
           <table class="table table-zebra">
             <thead>
               <tr>
-                <th>RFID</th>
+                <th>Img</th>
                 <th>Location</th>
                 <th>Time</th>
                 <th>Name</th>
                 <th>DOC</th>
+                <th>Level</th>
               </tr>
             </thead>
             <tbody>
               <For each={resTimestamps()}>
                 {(timestamp) => (
                   <tr>
-                    <td>{timestamp.rfid}</td>
-                    <td>{timestamp.location}</td>
-                    <td>{timestamp.ts}</td>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="avatar avatar-rounded">
+                          <div class="mask mask-squircle w-12 h-12">
+                            <img
+                              src={`/imgs/${timestamp.resident.doc}.jpg`}
+                              onError={(e) => e.currentTarget.src = '/imgs/default.jpg'}
+                              class="w-12 h-12 object-cover"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{getLocationName(timestamp.timestamp.location)}</td>
+                    <td>{timestamp.timestamp.ts}</td>
+                    <td>{timestamp.resident.name}</td>
+                    <td>{timestamp.resident.doc}</td>
+                    <td>{timestamp.resident.level}</td>
                   </tr>
                 )}
               </For>

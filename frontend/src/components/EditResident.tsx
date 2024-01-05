@@ -25,9 +25,9 @@ function EditResidentModal(props: EditResidentModalProps): JSXElement {
   );
   const [editRoom, setEditRoom] = createSignal<buildRoom>(getBuildRoom());
   const [rfid, setRfid] = createSignal<string>(props.resident.rfid);
-  const podLetters = ["A", "B", "C"];
+  const podLetters = ["A", "B", "C", "D", "E", "F"];
   const [exitStatus, setExitStatus] = createSignal<ExitType[]>([]);
-  const roomNumbers = Array.from({ length: 20 }, (_, i) => i + 1);
+  const roomNumbers = Array.from({ length: 15 }, (_, i) => i + 1);
   const bunkPositions = ["Top", "Bottom"];
   const levels = Array.from({ length: 5 }, (_, i) => i + 1);
   const unitLetters = ["A", "B", "C", "D", "E"];

@@ -22,6 +22,7 @@ impl OrmSerializable for sea_orm::JsonValue {}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ResidentTimestamp {
+    pub id: i32,
     pub doc: String,
     pub name: String,
     pub location: i32,
@@ -33,6 +34,7 @@ pub struct ResidentTimestamp {
 impl From<(crate::residents::Model, Model)> for ResidentTimestamp {
     fn from(tuple: (crate::residents::Model, Model)) -> Self {
         ResidentTimestamp {
+            id: tuple.0.id,
             doc: tuple.0.doc,
             name: tuple.0.name,
             location: tuple.1.location,

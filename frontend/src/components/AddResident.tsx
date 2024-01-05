@@ -37,7 +37,7 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     level: 2,
   });
 
-  const roomLetters = ["A", "B", "C"];
+  const roomLetters = ["A", "B", "C", "D", "E", "F"];
   const unitLetters = ["A", "B", "C", "D", "E"];
   const roomNumbers = Array.from({ length: 20 }, (_, i) => i + 1);
   const bunkPositions = ["Top", "Bottom"];
@@ -66,6 +66,7 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     setFormErrors(errors);
     return isValid;
   };
+
   const updateRoom = (field: keyof buildRoom, value: string | number) => {
     if (field === 'bunk' && value === 'Top') {
       setEditRoom({ ...editRoom(), bunk: 'T' });
@@ -79,7 +80,6 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
   // handle file upload. pictures are stored on the front end 
   // in the /imgs folder and are named the residents DOC#.jpg
   const handleFileUpload = (e: any) => {
-    adre
     const field = e.target;
     if (field.files.length > 0) {
       console.log("file found!")
