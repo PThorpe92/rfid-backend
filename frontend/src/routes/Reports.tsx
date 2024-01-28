@@ -17,28 +17,25 @@ function ViewReports(): JSXElement {
 
   const fetchTimestamps = async () => {
     console.log("fetching timestamps");
-    let urlstring = ``;
-    switch (true) {
-      case (selectedLocation() && startDate() !== '' && endDate() !== ''):
-        urlstring = `timestamps?location=${selectedLocation()}&range=${startDate()}=${endDate()}`;
-        break;
-      case (startDate() !== '' && endDate() !== ''):
-        urlstring = `timestamps?range=${startDate()}-${endDate()}`;
-        break;
-      case (selectedLocation() !== null):
-        urlstring = `timestamps?location=${selectedLocation()}`;
-        break;
-      case (unique()):
-        urlstring = `timestamps?unique=true`;
-        break;
-      default:
-        urlstring = `timestamps`;
-    };
+    let urlstring = `timestamps?`;
+    if (selectedLocation()) {
+      urlstring += `location=${selectedLocation()}&`;
+    }
+    if (startDate() !== '' && endDate() !== '') {
+      urlstring += `range=${startDate()}-${endDate()}&`;
+    }
+    if (unique()) {
+      urlstring += 'unique=true'
+    }
+    if (urlstring[-1] === '&') {
+      urlstring = urlstring.substring(0, urlstring.length - 1);
+    }
     let response = await API.GET(urlstring);
     if (response?.data) {
       setResTimestamps(response.data as SResidentTimestamp[]);
     }
   };
+
   const getLocationName = (locationId: number): string => {
     if (allLocations() === undefined || allLocations().length === 0) {
       return `${locationId}`;
@@ -90,10 +87,10 @@ function ViewReports(): JSXElement {
             <DatePicker label="End Date" onSelectDate={setEndDate} />
             <div class='btn btn-primary mt-4' onClick={handleShowLocationsDropdown}>Select Location</div>
             <button class="btn btn-primary mt-4" onClick={fetchTimestamps}>Fetch Timestamps</button>
-            <div class='badge badge-accent badge-lg mt-4' onClick={handleHideLocationsDropdown}>{selectedLocation() ? `Location: ${selectedLocation()}` : 'Select Location'}</div>
+            <div class='badge badge-accent badge-lg mt-4' onClick={handleHideLocationsDropdown}>{selectedLocation() ? `Location: ${selectedLocation()}` : '?'}</div>
             <div class="form-control">
               <label class="label cursor-pointer">
-                <span class="badge badge-primary badge-lg mt-4">Show Unique Only</span>
+                Unique only
                 <input type="checkbox" class="toggle mt-5" onchange={handleCheckUnique} />
               </label>
             </div>

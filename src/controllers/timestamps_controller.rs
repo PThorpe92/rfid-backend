@@ -1,9 +1,6 @@
 use crate::{
     app_config::DB,
-    models::{
-        self,
-        timestamps::{PostTimestamp, RangeParams},
-    },
+    models::timestamps::PostTimestamp,
     models::{response::Response, timestamps::ResidentTimestamp},
 };
 use actix_web::{get, http::header::ContentType, post, web, HttpResponse};
@@ -13,8 +10,8 @@ use entity::{
 };
 use reqwest::StatusCode;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, QueryFilter, QuerySelect, Set,
-    TryIntoModel,
+    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, Paginator, PaginatorTrait,
+    QueryFilter, QuerySelect, Set, TryIntoModel,
 };
 use serde::Deserialize;
 
@@ -53,6 +50,31 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
         query = query.distinct_on([(residents::Entity, residents::Column::Id)]);
     }
     // Executing the query
+    if let Some(per_page) = query_params.per_page {
+         let paginator = query.paginate(db, per_page);
+        let page = query_params.page.unwrap_or(1);
+        let query = paginator.fetch_page(page).await?;
+
+        let result: Vec<ResidentTimestamp> = query.into_iter().map(|(timestamp, resident)| {
+        ResidentTimestamp {
+            resident: resident.unwrap_or(residents::Model {
+                id: 0,
+                name: "".to_string(),
+                rfid: "".to_string(),
+                current_location: 0,
+                is_deleted: false,
+                unit: 0,
+                doc: "".to_string(),
+                room: "".to_string(),
+                level: 0,
+            }),
+            timestamp
+        }
+    }).collect();
+        let response = Response::<ResidentTimestamp>::from_paginator(page, result);
+        return Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
+    }
+
     let result = query.all(db).await?;
 
     // Mapping the result to the ResidentTimestamp struct
@@ -103,23 +125,4 @@ pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTi
             Ok(HttpResponse::Ok().content_type(ContentType::json()).json(error_resp))
         }
     }
-}
-
-/// GET: /api/timestamps/{start}/{end}
-#[get("/api/timestamps/{start_date}/{end_date}")]
-#[rustfmt::skip]
-pub async fn show_range(db: web::Data<DB>, range: web::Path<RangeParams>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    let db = &db.0;
-    let range = range.into_inner();
-    let time = Timestamp::find().find_also_related(Resident).filter(entity::timestamps::Column::Ts.between(range.start_date, range.end_date)).all(db).await?;
-    let result = time.into_iter().map(|(timestamp, resident)| {
-        let resident: residents::Model = resident.unwrap();
-        let timestamp: timestamps::Model = timestamp;
-        ResidentTimestamp {
-            resident,
-            timestamp
-        }
-    }).collect::<Vec<models::timestamps::ResidentTimestamp>>();
-    let response = Response::<models::timestamps::ResidentTimestamp>::from_vec(result);
-    Ok(HttpResponse::Ok().content_type(ContentType::json()).json(response))
 }
