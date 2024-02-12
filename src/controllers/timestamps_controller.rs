@@ -10,13 +10,14 @@ use entity::{
 };
 use reqwest::StatusCode;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, Paginator, PaginatorTrait,
-    QueryFilter, QuerySelect, Set, TryIntoModel,
+    ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter,
+    QuerySelect, Set, TryIntoModel,
 };
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct FilterOpts {
+    // query string parameters
     pub unique: Option<bool>,
     pub per_page: Option<u64>,
     pub page: Option<u64>,
