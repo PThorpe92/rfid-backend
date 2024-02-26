@@ -27,7 +27,12 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(ColumnDef::new(Column::Name).string().not_null())
-                    .col(ColumnDef::new(Column::Doc).string().not_null())
+                    .col(
+                        ColumnDef::new(Column::Doc)
+                            .integer()
+                            .not_null()
+                            .unique_key(),
+                    )
                     .col(ColumnDef::new(Column::Room).string().not_null())
                     .col(ColumnDef::new(Column::Unit).integer().not_null())
                     .col(

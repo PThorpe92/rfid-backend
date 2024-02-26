@@ -1,17 +1,13 @@
-use crate::{
-    app_config::DB,
-    models::timestamps::PostTimestamp,
-    models::{response::Response, timestamps::ResidentTimestamp},
-};
+use crate::{app_config::DB, models::response::Response};
 use actix_web::{get, http::header::ContentType, post, web, HttpResponse};
 use entity::{
     residents::{self, Entity as Resident},
-    timestamps::{self, Entity as Timestamp},
+    timestamps::{self, Entity as Timestamp, PostTimestamp, ResidentTimestamp},
 };
 use reqwest::StatusCode;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter,
-    QuerySelect, Set, TryIntoModel,
+    QuerySelect, Set,
 };
 use serde::Deserialize;
 
@@ -25,6 +21,7 @@ pub struct FilterOpts {
     pub range: Option<String>,
     pub location: Option<i32>,
     pub rfid: Option<String>,
+    pub doc: Option<i32>,
 }
 
 #[rustfmt::skip]
@@ -57,19 +54,13 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
         let query = paginator.fetch_page(page).await?;
 
         let result: Vec<ResidentTimestamp> = query.into_iter().map(|(timestamp, resident)| {
+            let resident: residents::Model = resident.unwrap();
         ResidentTimestamp {
-            resident: resident.unwrap_or(residents::Model {
-                id: 0,
-                name: "".to_string(),
-                rfid: "".to_string(),
-                current_location: 0,
-                is_deleted: false,
-                unit: 0,
-                doc: "".to_string(),
-                room: "".to_string(),
-                level: 0,
-            }),
-            timestamp
+                id: resident.id,
+                name: resident.name,
+                doc: resident.doc,
+                location: timestamp.location,
+                ts: timestamp.ts,
         }
     }).collect();
         let response = Response::<ResidentTimestamp>::from_paginator(page, result);
@@ -80,12 +71,14 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
 
     // Mapping the result to the ResidentTimestamp struct
     let response: Vec<ResidentTimestamp> = result.into_iter().map(|(timestamp, resident)| {
-        let resident: residents::Model = resident.unwrap(); // Handle the unwrap properly in production code
-        let timestamp: timestamps::Model = timestamp;
-        ResidentTimestamp {
-            resident,
-            timestamp
-        }
+            let resident: residents::Model = resident.unwrap();
+            ResidentTimestamp {
+                    id: resident.id,
+                    name: resident.name,
+                    doc: resident.doc,
+                    location: timestamp.location,
+                    ts: timestamp.ts,
+            }
     }).collect();
     let response = Response::<ResidentTimestamp>::from_vec(response);
     Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
@@ -97,7 +90,7 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
 pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTimestamp>) -> Result<HttpResponse, Box<dyn std::error::Error>>{
     let db = &db.0;
     let mut timestamp = timestamp_data.into_inner();
-    match Resident::find().filter(residents::Column::Rfid.eq(timestamp.rfid.clone())).filter(residents::Column::IsDeleted.eq(false)).one(db).await? {
+    match Resident::find().filter(residents::Column::Rfid.eq(timestamp.rfid)).filter(residents::Column::IsDeleted.eq(false)).one(db).await? {
         Some(resident) => {
              let mut resident = resident.into_active_model();
                 if timestamp.location == resident.current_location.to_owned().unwrap() {
@@ -115,9 +108,12 @@ pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTi
                 };
                 let new_ts = new_timestamp.save(db).await?;
 
-                let response = Response::<crate::models::timestamps::ResidentTimestamp>::from_data(crate::models::timestamps::ResidentTimestamp {
-                    resident: updated_resident.try_into_model().unwrap(),
-                    timestamp: new_ts.try_into_model().unwrap(),
+                let response = Response::<ResidentTimestamp>::from_data(ResidentTimestamp {
+                    id: updated_resident.id.to_owned().unwrap(),
+                    name: updated_resident.name.to_owned().unwrap(),
+                    doc: updated_resident.doc.to_owned().unwrap(),
+                    location: new_ts.location.unwrap(),
+                    ts: new_ts.ts.unwrap(),
                 });
                 Ok(HttpResponse::Ok().content_type(ContentType::json()).status(StatusCode::CREATED).json(response))
         }

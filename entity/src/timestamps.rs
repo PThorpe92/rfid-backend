@@ -3,6 +3,7 @@
 use crate::prelude::OrmSerializable;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 impl OrmSerializable for Model {}
 
 #[derive(
@@ -19,14 +20,21 @@ pub struct Model {
 
 impl OrmSerializable for ResidentTimestamp {}
 impl OrmSerializable for sea_orm::JsonValue {}
+impl OrmSerializable for PostTimestamp {}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ResidentTimestamp {
     pub id: i32,
-    pub doc: String,
+    pub doc: i32,
     pub name: String,
     pub location: i32,
     pub ts: DateTime, // Adjust the DateTime type based on your schema
+}
+
+impl Display for PostTimestamp {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "RFID: {}, Location: {}", self.rfid, self.location)
+    }
 }
 
 // Implement conversion from the tuple of models to `ResidentTimestamp`
@@ -43,15 +51,9 @@ impl From<(crate::residents::Model, Model)> for ResidentTimestamp {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SeedTimestamp {
-    pub rfid: i32,
-    pub location: i32,
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PostTimestamp {
-    pub rfid: String,
+    pub rfid: i32,
     pub location: i32,
 }
 

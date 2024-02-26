@@ -1,12 +1,6 @@
-use std::path::PathBuf;
-
 use super::timestamps_controller::FilterOpts;
 use crate::app_config::DB;
-use crate::models::residents::UpdateResident;
-use crate::models::{
-    residents::{PathParams, Rfid},
-    response::Response,
-};
+use crate::models::response::Response;
 use actix_multipart::form::tempfile::TempFile;
 use actix_multipart::form::MultipartForm;
 use actix_web::{
@@ -14,6 +8,7 @@ use actix_web::{
     http::{header, StatusCode},
     patch, post, web, HttpResponse,
 };
+use entity::prelude::UpdateResident;
 use entity::{
     residents::{self, Entity as Resident},
     timestamps,
@@ -21,6 +16,7 @@ use entity::{
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set, TryIntoModel,
 };
+use std::path::PathBuf;
 #[derive(MultipartForm)]
 pub struct FormData {
     pub file: TempFile,
@@ -85,9 +81,9 @@ pub async fn index(db: web::Data<DB>,params: web::Query<FilterOpts>) -> Result<H
 
 #[rustfmt::skip]
 #[get("/api/residents/{rfid}")]
-pub async fn show(db: web::Data<DB>, rfid: actix_web::web::Path<Rfid>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+pub async fn show(db: web::Data<DB>, rfid: actix_web::web::Path<String>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
-    let rfid = rfid.into_inner().rfid;
+    let rfid = rfid.into_inner();
     if let Ok(resident) = Resident::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
     if resident.is_none() {
         let error = Response::<String>::from_error("Error retrieving residents");
@@ -132,9 +128,9 @@ pub async fn destroy(db: web::Data<DB>, rfid: web::Path<String>,) -> Result<Http
 
 #[rustfmt::skip]
 #[patch("/api/residents/{rfid}")]
-pub async fn update(db: web::Data<DB>, rfid: actix_web::web::Path<Rfid>, resident: web::Json<UpdateResident>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+pub async fn update(db: web::Data<DB>, rfid: actix_web::web::Path<String>, resident: web::Json<UpdateResident>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
      let db = &db.0;
-    let rfid = rfid.into_inner().rfid;
+    let rfid = rfid.into_inner();
     let resident = resident.into_inner();
     if let Ok(to_update) = Resident::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
     if to_update.is_none() {
@@ -162,12 +158,12 @@ pub async fn update(db: web::Data<DB>, rfid: actix_web::web::Path<Rfid>, residen
 
 #[rustfmt::skip]
 #[get("/api/residents/{rfid}/timestamps")]
-pub async fn show_resident_timestamps(db: web::Data<DB>, rfid: actix_web::web::Path<Rfid>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+pub async fn show_resident_timestamps(db: web::Data<DB>, rfid: actix_web::web::Path<String>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let query_params = query.into_inner();
     let per_page = query_params.per_page.unwrap_or(10);
     let page = query_params.page.unwrap_or(1);
     let db = &db.0;
-    let rfid = rfid.into_inner().rfid;
+    let rfid = rfid.into_inner();
     if let Some(resident) = residents::Entity::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await? {
     let ts = timestamps::Entity::find()
         .filter(timestamps::Column::Rfid.eq(resident.id))
@@ -182,17 +178,19 @@ pub async fn show_resident_timestamps(db: web::Data<DB>, rfid: actix_web::web::P
 }
 
 #[rustfmt::skip]
-#[get("/api/residents/{rfid}/timestamps/{start_date}/{end_date}")]
-pub async fn show_resident_timestamps_range(db: web::Data<DB>, rfid: actix_web::web::Path<PathParams>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+#[get("/api/residents/{rfid}/timestamps")]
+pub async fn show_resident_timestamps_range(db: web::Data<DB>, rfid: actix_web::web::Path<String>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let query_params = query.into_inner();
     let per_page = query_params.per_page.unwrap_or(10);
     let page = query_params.page.unwrap_or(1);
     let db = &db.0;
-    let path = rfid.into_inner();
-    let rfid = path.rfid;
+    let rfid = rfid.into_inner();
+    let range = query_params.range.unwrap_or(format!("{},{}", chrono::Local::now(), chrono::Local::now()));
+    let beg = range.split(',').collect::<Vec<&str>>()[0];
+    let end = range.split(',').collect::<Vec<&str>>()[1];
     if let Some(resident) = residents::Entity::find().filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await? {
     let ts = timestamps::Entity::find()
-        .filter(timestamps::Column::Rfid.eq(resident.id)).filter(timestamps::Column::Ts.between(path.start_date, path.end_date))
+        .filter(timestamps::Column::Rfid.eq(resident.id)).filter(timestamps::Column::Ts.between(beg, end))
         .paginate(db, per_page);
     let ts = ts.fetch_page(page - 1).await?;
     let response: Response<timestamps::Model> = Response::from_vec(ts);

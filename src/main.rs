@@ -1,5 +1,7 @@
 use actix_cors::Cors;
+use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{
+    cookie::Key,
     middleware,
     web::{Data, JsonConfig},
     App, HttpServer,
@@ -7,6 +9,7 @@ use actix_web::{
 use scan_mvcf::{
     app_config::DB,
     controllers::{locations_controller, residents_controller, timestamps_controller},
+    middleware::auth::SECRET_KEY,
 };
 use std::io;
 
@@ -19,6 +22,11 @@ async fn main() -> io::Result<()> {
     log::debug!(
         "Temp file path: {:?}",
         upload_dir.clone().unwrap_or("dumb".to_string())
+    );
+    let key = Key::derive_from(
+        SECRET_KEY
+            .get_or_init(|| std::env::var("JWT_SECRET_KEY").unwrap())
+            .as_bytes(),
     );
     let ip = std::env::var("LOCAL_IP").unwrap_or("localhost".to_string());
     log::info!("starting Actix-Web HTTP server at http://{}", ip);
@@ -60,6 +68,10 @@ async fn main() -> io::Result<()> {
                 .service(timestamps_controller::store_timestamp)
                 .wrap(middleware::Logger::default())
                 .wrap(cors)
+                .wrap(SessionMiddleware::new(
+                    CookieSessionStore::default(),
+                    key.clone(),
+                ))
         })
         .bind((ip, 8080))?
         .workers(4)

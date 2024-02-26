@@ -1,11 +1,8 @@
-use super::timestamps::{PostTimestamp, ResidentTimestamp};
 use actix_web::ResponseError;
 use entity::prelude::OrmSerializable as Serializable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 
-impl Serializable for PostTimestamp {}
-impl Serializable for ResidentTimestamp {}
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Response<T> {
     pub success: bool,

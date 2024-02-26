@@ -27,7 +27,6 @@ impl MigrationTrait for Migration {
         locations::Entity::insert_many(active_locations)
             .exec(db)
             .await?;
-
         Ok(())
     }
 

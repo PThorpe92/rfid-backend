@@ -6,6 +6,9 @@ mod m20231210_134639_timestamps;
 mod m20231210_150005_levels;
 mod m20231213_132412_seed_locations;
 mod m20231213_162420_seed_test_data;
+mod m20240224_203835_accounts;
+mod m20240224_231812_transactions;
+mod m20240225_161903_users;
 
 pub struct Migrator;
 
@@ -19,6 +22,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20231210_150005_levels::Migration),
             Box::new(m20231213_132412_seed_locations::Migration),
             Box::new(m20231213_162420_seed_test_data::Migration),
+            Box::new(m20240224_203835_accounts::Migration),
+            Box::new(m20240224_231812_transactions::Migration),
+            Box::new(m20240225_161903_users::Migration),
         ]
     }
 }
