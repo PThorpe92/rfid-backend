@@ -8,7 +8,10 @@ use actix_web::{
 };
 use scan_mvcf::{
     app_config::DB,
-    controllers::{locations_controller, residents_controller, timestamps_controller},
+    controllers::{
+        accounts_controller, auth_controller, locations_controller, residents_controller,
+        timestamps_controller,
+    },
     middleware::auth::SECRET_KEY,
 };
 use std::io;
@@ -66,6 +69,13 @@ async fn main() -> io::Result<()> {
                 .service(residents_controller::upload_jpg)
                 .service(timestamps_controller::index_timestamps)
                 .service(timestamps_controller::store_timestamp)
+                .service(auth_controller::login)
+                .service(auth_controller::logout)
+                .service(accounts_controller::get_all_transactions)
+                .service(accounts_controller::index_accounts)
+                .service(accounts_controller::show_account)
+                .service(accounts_controller::create_account_transaction)
+                .service(accounts_controller::show_account_transactions)
                 .wrap(middleware::Logger::default())
                 .wrap(cors)
                 .wrap(SessionMiddleware::new(
