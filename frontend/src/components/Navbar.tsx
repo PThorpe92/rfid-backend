@@ -20,6 +20,9 @@ function Navbar(): JSXElement {
           <li>
             <A href="/scan">Active Scan</A>
           </li>
+          <li>
+            <A href="/login">Login</A>
+          </li>
         </ul>
       </div>
     </div>

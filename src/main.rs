@@ -1,7 +1,11 @@
 use actix_cors::Cors;
-use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+use actix_session::{
+    config::{BrowserSession, SessionLifecycle},
+    storage::CookieSessionStore,
+    SessionMiddleware,
+};
 use actix_web::{
-    cookie::Key,
+    cookie::{Key, SameSite},
     middleware,
     web::{Data, JsonConfig},
     App, HttpServer,
@@ -10,7 +14,7 @@ use scan_mvcf::{
     app_config::DB,
     controllers::{
         accounts_controller, auth_controller, locations_controller, residents_controller,
-        timestamps_controller,
+        timestamps_controller, user_controller,
     },
     middleware::auth::SECRET_KEY,
 };
@@ -26,6 +30,7 @@ async fn main() -> io::Result<()> {
         "Temp file path: {:?}",
         upload_dir.clone().unwrap_or("dumb".to_string())
     );
+    let secure = std::env::var("APP_ENV").unwrap_or("development".to_string()) == "production";
     let key = Key::derive_from(
         SECRET_KEY
             .get_or_init(|| std::env::var("JWT_SECRET_KEY").unwrap())
@@ -51,6 +56,15 @@ async fn main() -> io::Result<()> {
                 .app_data(Data::new(db.clone()))
                 .app_data(Data::new(tempfile_path.clone()))
                 .app_data(json_config.clone())
+                .wrap(
+                    SessionMiddleware::builder(CookieSessionStore::default(), key.clone())
+                        .cookie_secure(secure)
+                        .cookie_same_site(SameSite::None)
+                        .session_lifecycle(SessionLifecycle::BrowserSession(
+                            BrowserSession::default(),
+                        ))
+                        .build(),
+                )
                 .service(locations_controller::index)
                 .service(locations_controller::show)
                 .service(locations_controller::show_location_timestamps)
@@ -76,12 +90,10 @@ async fn main() -> io::Result<()> {
                 .service(accounts_controller::show_account)
                 .service(accounts_controller::create_account_transaction)
                 .service(accounts_controller::show_account_transactions)
+                .service(user_controller::get_users)
+                .service(user_controller::create)
                 .wrap(middleware::Logger::default())
                 .wrap(cors)
-                .wrap(SessionMiddleware::new(
-                    CookieSessionStore::default(),
-                    key.clone(),
-                ))
         })
         .bind((ip, 8080))?
         .workers(4)

@@ -23,6 +23,11 @@ export interface SResident {
   level: number;
 }
 
+export interface SUser {
+  [key: string]: string;
+  username: string;
+}
+
 export interface SLocation {
   [key: string]: string | number;
   id: number;
@@ -40,5 +45,5 @@ export interface STimestamp {
 export interface ServerResponse {
   success: boolean;
   message?: string;
-  data?: SResident[] | STimestamp[] | SLocation[] | SResidentTimestamp[];
+  data: SResident[] | STimestamp[] | SLocation[] | SResidentTimestamp[] | SUser[];
 }

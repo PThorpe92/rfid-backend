@@ -7,6 +7,7 @@ import Admin from "./routes/Admin";
 import "./input.css";
 import App from "./App";
 import Monitor from "./routes/Monitor";
+import Login from "./routes/Login";
 
 const root = document.getElementById("root");
 
@@ -23,6 +24,7 @@ render(
       <Route path="/reports" component={ViewReports} />
       <Route path="/admin" component={Admin} />
       <Route path="/monitor" component={Monitor} />
+      <Route path="/login" component={Login} />
     </Router>
   ),
   document.getElementById("root")!,

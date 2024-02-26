@@ -11,15 +11,16 @@
   "license": "MIT",
   "devDependencies": {
     "daisyui": "^4.4.24",
+    "prettier": "^3.1.0",
     "solid-devtools": "^0.27.9",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
     "vite": "^4.5.1",
-    "vite-plugin-solid": "^2.8.0",
-    "prettier": "^3.1.0"
+    "vite-plugin-solid": "^2.8.0"
   },
   "dependencies": {
     "@solidjs/router": "^0.10.5",
+    "axios": "^1.6.7",
     "pnpm": "^8.13.1",
     "solid-js": "^1.8.7",
     "solid-toast": "^0.5.0"

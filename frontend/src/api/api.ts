@@ -1,4 +1,6 @@
 import { ServerResponse } from "../models/models";
+import axios from "axios";
+axios.defaults.withCredentials = true;
 
 export class API {
   public static url = import.meta.env.VITE_BACKEND_ADDR;
@@ -15,92 +17,87 @@ export class API {
     "Content-Type": "image/jpeg"
   };
 
-  static async GET(uri: string): Promise<ServerResponse | undefined> {
+  public static async GET(uri: string): Promise<ServerResponse> {
     try {
-      const response = await fetch(this.fullUrl + uri, {
+      const response = await axios(this.fullUrl + uri, {
         method: "GET",
         headers: this.headers,
       });
-      if (!response.ok) {
-        throw Error(response.statusText);
+      if (response.status !== 200) {
+        return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      let retResp = response.json();
+      let retResp = response.data;
       return await retResp;
     } catch (err) {
-      console.error("GET ERROR:", err);
-      return undefined;
+      return { success: false, message: "error" + err, data: [] };
     }
   }
 
-  static async PATCH(
+  public static async PATCH(
     uri: string,
     payload: any,
-  ): Promise<ServerResponse | undefined> {
+  ): Promise<ServerResponse> {
     try {
-      const response = await fetch(this.fullUrl + uri, {
+      const response = await axios(this.fullUrl + uri, {
         method: "PATCH",
         headers: this.headers,
-        body: JSON.stringify(payload),
+        data: payload,
       });
-      if (!response.ok) {
-        throw Error(response.statusText);
+      if (response.status !== 200) {
+        return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      return await response.json();
+      return await response.data;
     } catch (err) {
-      console.error("PATCH ERROR:", err);
-      return undefined;
+      return { success: false, message: "error" + err, data: [] };
     }
   }
 
-  static async POST(uri: string, payload: any): Promise<ServerResponse | undefined> {
+  public static async POST(uri: string, payload: any): Promise<ServerResponse> {
     try {
-      const response = await fetch(this.fullUrl + uri, {
+      const response = await axios(this.fullUrl + uri, {
         method: "POST",
         headers: this.headers,
-        body: JSON.stringify(payload),
+        data: payload,
       });
-      if (!response.ok) {
-        throw Error(response.statusText);
+      if (response.status !== 200) {
+        return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      return await response.json();
+      return await response.data;
     } catch (err) {
-      console.error("POST ERROR:", err);
-      return undefined;
+      return { success: false, message: "error" + err, data: [] };
     }
   }
 
-  static async UPLOAD(uri: string, payload: FormData): Promise<ServerResponse | undefined> {
+  public static async UPLOAD(uri: string, payload: FormData): Promise<ServerResponse> {
     try {
-      const response = await fetch(this.fullUrl + uri, {
+      const response = await axios(this.fullUrl + uri, {
         method: "POST",
         headers: {
           accept: "application/json",
         },
-        body: payload,
+        data: payload,
       });
-      if (!response.ok) {
-        throw Error(response.statusText);
+      if (response.status !== 200) {
+        return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      return await response.json();
+      return await response.data;
     } catch (err) {
-      console.error("UPLOAD ERROR:", err);
-      return undefined;
+      return { success: false, message: "error", data: [] };
     }
   }
 
-  static async DELETE(uri: string): Promise<ServerResponse | undefined> {
+  public static async DELETE(uri: string): Promise<ServerResponse> {
     try {
-      const response = await fetch(this.fullUrl + uri, {
+      const response = await axios(this.fullUrl + uri, {
         method: "DELETE",
         headers: this.headers,
       });
-      if (!response.ok) {
-        throw Error(response.statusText);
+      if (response.status !== 200) {
+        return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      return await response.json();
+      return await response.data;
     } catch (err) {
-      console.error("DELETE ERROR:", err);
-      return undefined;
+      return { success: false, message: "error", data: [] };
     }
   }
 }
