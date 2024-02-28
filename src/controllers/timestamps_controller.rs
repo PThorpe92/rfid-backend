@@ -22,6 +22,7 @@ pub struct FilterOpts {
     pub location: Option<i32>,
     pub rfid: Option<String>,
     pub doc: Option<i32>,
+    pub order_id: Option<i32>,
 }
 
 #[rustfmt::skip]

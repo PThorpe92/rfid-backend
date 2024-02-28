@@ -4,14 +4,14 @@ use serde::{Deserialize, Serialize};
 
 impl OrmSerializable for Model {}
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "accounts")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i32,
     #[sea_orm(foreign_key = ("residents", "doc"))]
     pub resident_id: i32,
-    pub balance: i32,
+    pub balance: f64,
     pub is_deleted: bool,
 }
 

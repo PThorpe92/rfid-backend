@@ -1,7 +1,10 @@
 pub mod accounts;
+pub mod inventory_event;
+pub mod items;
 pub mod locations;
 pub mod prelude;
 pub mod residents;
 pub mod timestamps;
+pub mod transaction_items;
 pub mod transactions;
 pub mod users;

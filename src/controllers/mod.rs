@@ -9,3 +9,5 @@ pub mod accounts_controller;
 pub mod auth_controller;
 
 pub mod user_controller;
+
+pub mod order_controller;

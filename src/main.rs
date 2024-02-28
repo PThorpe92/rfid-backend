@@ -88,7 +88,7 @@ async fn main() -> io::Result<()> {
                 .service(accounts_controller::get_all_transactions)
                 .service(accounts_controller::index_accounts)
                 .service(accounts_controller::show_account)
-                .service(accounts_controller::create_account_transaction)
+                .service(accounts_controller::post_transaction)
                 .service(accounts_controller::show_account_transactions)
                 .service(user_controller::get_users)
                 .service(user_controller::create)

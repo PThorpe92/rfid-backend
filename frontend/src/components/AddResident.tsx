@@ -31,7 +31,7 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     current_location: 0,
     rfid: "",
     name: "",
-    doc: "",
+    doc: 0,
     room: "",
     unit: 1,
     level: 2,
@@ -59,7 +59,7 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
     }
 
     // Validate DOC (all numbers, no more than 10 digits)
-    if (!/^\d{1,10}$/.test(newResident().doc)) {
+    if (newResident().doc.toString().length > 10 || !/^\d+$/.test(newResident().doc.toString())) {
       errors.doc = "DOC must be all numbers and no more than 10 digits.";
       isValid = false;
     }

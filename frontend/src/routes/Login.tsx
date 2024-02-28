@@ -3,23 +3,13 @@ import { API } from "../api/api";
 import { toast } from "solid-toast";
 import Navbar from "../components/Navbar";
 import { SUser } from "../models/models";
+import { A } from "@solidjs/router";
 
 function Login(): JSXElement {
 
   const [form, setForm] = createSignal({ email: "", password: "" });
   const [error, setError] = createSignal("");
   const [users, setUsers] = createSignal<SUser[]>([]);
-
-  async function getUsers(): Promise<void> {
-    const response = await API.GET("users");
-    if (response !== undefined && response.success) {
-      setUsers(response.data as SUser[]);
-      console.log(response.data);
-      toast.success("Users retrieved successfully");
-    } else {
-      toast.error(response?.message);
-    }
-  }
 
   async function handleSubmit(): Promise<void> {
     const response = await API.POST("auth/login", form());
@@ -59,7 +49,7 @@ function Login(): JSXElement {
                   />
                 </div>
                 <button class="btn btn-outline" onclick={handleSubmit}>Login</button>
-                <button class="btn btn-outline" onClick={getUsers}>Get Users</button>
+                <A class="btn btn-outline" href="/annex">Annex</A>
               </div>
             </div>
           </div>

@@ -8,6 +8,8 @@ import "./input.css";
 import App from "./App";
 import Monitor from "./routes/Monitor";
 import Login from "./routes/Login";
+import Annex from "./routes/Annex";
+import Items from "./components/Items";
 
 const root = document.getElementById("root");
 
@@ -25,6 +27,8 @@ render(
       <Route path="/admin" component={Admin} />
       <Route path="/monitor" component={Monitor} />
       <Route path="/login" component={Login} />
+      <Route path="/annex" component={Annex} />
+      <Route path="/annex/items" component={Items} />
     </Router>
   ),
   document.getElementById("root")!,
