@@ -24,7 +24,7 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
   const [showDeleteResident, setShowDeleteResident] = createSignal(false);
   const [currentScanLocation, setCurrentScanLocation] = createSignal<number>(props.currentScanLocation);
   const [location, setLocation] = createSignal(0);
-  const [selectedResidentDoc, setSelectedResidentDoc] = createSignal<string>("");
+  const [selectedResidentDoc, setSelectedResidentDoc] = createSignal<number>();
 
   const lookupLocation = (locationId: number): SLocation => {
     if (allLocations() === undefined || allLocations().length === 0) {
@@ -246,7 +246,7 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
         </button>
         <Show when={showUploadPhoto()}>
           <AddPhoto
-            residentDoc={selectedResidentDoc()}
+            residentDoc={selectedResidentDoc()!}
             onClose={handleCloseAddPhoto}
           />
         </Show>

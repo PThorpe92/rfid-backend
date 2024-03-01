@@ -13,8 +13,8 @@ use actix_web::{
 use scan_mvcf::{
     app_config::DB,
     controllers::{
-        accounts_controller, auth_controller, locations_controller, residents_controller,
-        timestamps_controller, user_controller,
+        accounts_controller, auth_controller, locations_controller, order_controller,
+        residents_controller, timestamps_controller, user_controller,
     },
     middleware::auth::SECRET_KEY,
 };
@@ -90,6 +90,7 @@ async fn main() -> io::Result<()> {
                 .service(accounts_controller::show_account)
                 .service(accounts_controller::post_transaction)
                 .service(accounts_controller::show_account_transactions)
+                .service(order_controller::get_orders)
                 .service(user_controller::get_users)
                 .service(user_controller::create)
                 .wrap(middleware::Logger::default())

@@ -1,7 +1,10 @@
 export interface SResidentTimestamp {
   [key: string]: any;
-  resident: SResident;
-  timestamp: STimestamp;
+  id: number;
+  doc: number,
+  name: string,
+  location: number,
+  ts: string,
 }
 
 export enum ExitType {

@@ -5,7 +5,7 @@ import { API } from "../api/api";
 
 export interface AddPhotoProps {
   onClose: (e: ExitType) => void;
-  residentDoc: string;
+  residentDoc: number;
 }
 
 function AddPhoto(props: AddPhotoProps): JSXElement {

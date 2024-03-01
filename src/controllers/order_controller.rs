@@ -7,8 +7,9 @@ use actix_web::{
     HttpResponse,
 };
 use entity::{prelude::OrmSerializable, transaction_items::Entity as Orders};
-use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Related};
+use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use std::ops::Sub;
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct ReturnOrder {
@@ -25,12 +26,8 @@ pub struct ReturnItem {
 }
 
 impl ReturnOrder {
-    pub fn from_vec(
-        items: Vec<(
-            entity::transactions::Model,
-            Vec<entity::transaction_items::Model>,
-        )>,
-    ) -> Vec<Self> {
+    #[rustfmt::skip]
+    pub fn from_vec(items: Vec<(entity::transactions::Model, Vec<entity::transaction_items::Model>)>) -> Vec<Self> {
         items
             .iter()
             .map(|(transaction, items)| {
@@ -71,9 +68,21 @@ pub async fn get_orders(auth: Claims, db: Data<DB>, params: Query<FilterOpts>) -
             .json(items));
     }
     }
-        let items = entity::transactions::Entity::find().find_with_related(Orders).all(db).await?;
+    if let Some(range) = query_params.get_range() {
+        let items = entity::transactions::Entity::find().filter(entity::transactions::Column::Timestamp.between(range.0, range.1)).paginate(db, per_page);
+        let page = query_params.page.unwrap_or(1);
+        let items = items.fetch_page(page).await?;
         let response = Response::from_paginator(page, items);
-        Ok(HttpResponse::Ok()
+    return Ok(HttpResponse::Ok()
+        .insert_header(ContentType::json())
+        .json(response));
+        }
+        let date = chrono::Utc::now();
+        let end = chrono::Utc::now().sub(chrono::Duration::days(1));
+        let items = entity::transactions::Entity::find().filter(entity::transactions::Column::Timestamp.between(date, end)).paginate(db, per_page);
+        let items = items.fetch_page(page).await?;
+        let response = Response::from_paginator(page, items);
+        return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
-            .json(response))
+            .json(response));
 }

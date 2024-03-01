@@ -12,26 +12,29 @@ function ViewReports(): JSXElement {
   const [endDate, setEndDate] = createSignal<string>(''); // Format: YYYY-MM-DD
   const [resTimestamps, setResTimestamps] = createSignal<SResidentTimestamp[]>([]);
   const [allLocations, setAllLocations] = createSignal<SLocation[]>([]);
-  const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
+  const [totalPages, setTotalPages] = createSignal<number>(1);
+  const [currentPage, setCurrentPage] = createSignal<number>(0);
   const [unique, setUnique] = createSignal<boolean>(false);
+  const [all, setAll] = createSignal<boolean>(false);
 
   const fetchTimestamps = async () => {
     console.log("fetching timestamps");
-    let urlstring = `timestamps?`;
+    let urlstring = `timestamps?page=${currentPage()}&`;
     if (selectedLocation()) {
       urlstring += `location=${selectedLocation()}&`;
     }
     if (startDate() !== '' && endDate() !== '') {
-      urlstring += `range=${startDate()}-${endDate()}&`;
+      urlstring += `range=${startDate()};${endDate()}&`;
     }
     if (unique()) {
       urlstring += 'unique=true'
     }
-    if (urlstring[-1] === '&') {
+    if (urlstring[urlstring.length - 1] === '&' || urlstring[urlstring.length - 1] === '?') {
       urlstring = urlstring.substring(0, urlstring.length - 1);
     }
     let response = await API.GET(urlstring);
     if (response?.data) {
+      setTotalPages(parseInt(response.message!.split('=')[1]));
       setResTimestamps(response.data as SResidentTimestamp[]);
     }
   };
@@ -44,12 +47,6 @@ function ViewReports(): JSXElement {
     }
   }
 
-  const fetchResidents = async () => {
-    const response = await API.GET('residents?all=true');
-    if (response?.data) {
-      setAllResidents(response.data as SResident[]);
-    }
-  }
   const handleCheckUnique = () => {
     setUnique(!unique());
   }
@@ -65,13 +62,26 @@ function ViewReports(): JSXElement {
     setShowLocationsDropdown(false);
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchTimestamps();
+  }
+
+
+  const handleCheckAll = () => {
+    setAll(!all());
+    if (showLocationsDropdown()) {
+      setShowLocationsDropdown(false);
+    }
+  }
+
+
 
   // Fetch all locations for the dropdown
   onMount(async () => {
     const response = await API.GET('locations?all=true');
     if (response?.data) {
       setAllLocations(response.data as SLocation[]);
-      fetchResidents();
     }
   });
   return (
@@ -93,9 +103,13 @@ function ViewReports(): JSXElement {
                 Unique only
                 <input type="checkbox" class="toggle mt-5" onchange={handleCheckUnique} />
               </label>
+              <label class="label cursor-pointer">
+                All locations
+                <input type="checkbox" class="toggle mt-5" onchange={handleCheckAll} />
+              </label>
             </div>
           </div>
-          <Show when={showLocationsDropdown()}>
+          <Show when={showLocationsDropdown() && !all()}>
             <LocationsDropdown
               locations={allLocations()}
               onLocationSelect={(locationId: number) => handleLocationSelect(locationId)}
@@ -113,7 +127,6 @@ function ViewReports(): JSXElement {
                 <th>Time</th>
                 <th>Name</th>
                 <th>DOC</th>
-                <th>Level</th>
               </tr>
             </thead>
             <tbody>
@@ -125,7 +138,7 @@ function ViewReports(): JSXElement {
                         <div class="avatar avatar-rounded">
                           <div class="mask mask-squircle w-12 h-12">
                             <img
-                              src={`/imgs/${timestamp.resident.doc}.jpg`}
+                              src={`/imgs/${timestamp.doc}.jpg`}
                               onError={(e) => e.currentTarget.src = '/imgs/default.jpg'}
                               class="w-12 h-12 object-cover"
                             />
@@ -133,16 +146,28 @@ function ViewReports(): JSXElement {
                         </div>
                       </div>
                     </td>
-                    <td>{getLocationName(timestamp.timestamp.location)}</td>
-                    <td>{timestamp.timestamp.ts}</td>
-                    <td>{timestamp.resident.name}</td>
-                    <td>{timestamp.resident.doc}</td>
-                    <td>{timestamp.resident.level}</td>
+                    <td>{getLocationName(timestamp.location)}</td>
+                    <td>{timestamp.ts}</td>
+                    <td>{timestamp.name}</td>
+                    <td>{timestamp.doc}</td>
                   </tr>
                 )}
               </For>
             </tbody>
           </table>
+          <div class="flex justify-center gap-4 my-4">
+            <For each={Array.from({ length: totalPages() })}>
+              {(_, index) => (
+                <button
+                  class="btn btn-xs"
+                  onClick={() => handlePageChange(index() + 1)}
+                  classList={{ "btn-active": currentPage() === index() + 1 }}
+                >
+                  {index() + 1}
+                </button>
+              )}
+            </For>
+          </div>
         </div>
       </div>
     </>

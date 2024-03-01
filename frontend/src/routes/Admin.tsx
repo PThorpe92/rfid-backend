@@ -81,7 +81,7 @@ function Admin(): JSXElement {
       <h1 class="text-4xl text-center font-mono underline">
         MVCF Administration
       </h1>
-      <div class="flex flex-col items-center justify-center gap-10 v-screen flow-root">
+      <div class="flex flex-col items-center justify-center gap-10 v-screen">
         <Show when={!showResidentsTable() && !showLocationsTable()}>
           <div class="grid gap-10 grid-cols-1 md:grid-cols-2 mt-10">
             <button

@@ -1,5 +1,6 @@
 use crate::{app_config::DB, models::response::Response};
 use actix_web::{get, http::header::ContentType, post, web, HttpResponse};
+use chrono::NaiveDate;
 use entity::{
     residents::{self, Entity as Resident},
     timestamps::{self, Entity as Timestamp, PostTimestamp, ResidentTimestamp},
@@ -24,6 +25,22 @@ pub struct FilterOpts {
     pub doc: Option<i32>,
     pub order_id: Option<i32>,
 }
+impl FilterOpts {
+    pub fn get_range(&self) -> Option<(NaiveDate, NaiveDate)> {
+        if let Some(range) = self.range.clone() {
+            let range: Vec<&str> = range.split(';').collect();
+            if range.len() == 2 {
+                let start_date = range[0];
+                let end_date = range[1];
+                // date string format: 2024-02-19
+                let start_date = NaiveDate::parse_from_str(start_date, "%Y:%m:%d").ok()?;
+                let end_date = NaiveDate::parse_from_str(end_date, "%Y:%m:%d").ok()?;
+                return Some((start_date, end_date));
+            }
+        }
+        None
+    }
+}
 
 #[rustfmt::skip]
 
@@ -33,56 +50,32 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
     let query_params = query_params.into_inner();
     let mut query = Timestamp::find()
         .find_also_related(Resident).filter(residents::Column::IsDeleted.eq(false));
-
     if let Some(location) = query_params.location {
         query = query.filter(timestamps::Column::Location.eq(location));
-    }
-    if let Some(range) = query_params.range.clone() {
-        let range: Vec<&str> = range.split(',').collect();
-        if range.len() == 2 {
-            let start_date = range[0];
-            let end_date = range[1];
-            query = query.filter(timestamps::Column::Ts.between(start_date, end_date));
-        }
     }
     if let Some(true) = query_params.unique {
         query = query.distinct_on([(residents::Entity, residents::Column::Id)]);
     }
-    // Executing the query
-    if let Some(per_page) = query_params.per_page {
-         let paginator = query.paginate(db, per_page);
-        let page = query_params.page.unwrap_or(1);
-        let query = paginator.fetch_page(page).await?;
-
-        let result: Vec<ResidentTimestamp> = query.into_iter().map(|(timestamp, resident)| {
-            let resident: residents::Model = resident.unwrap();
-        ResidentTimestamp {
-                id: resident.id,
-                name: resident.name,
-                doc: resident.doc,
-                location: timestamp.location,
-                ts: timestamp.ts,
-        }
-    }).collect();
-        let response = Response::<ResidentTimestamp>::from_paginator(page, result);
-        return Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
+    if let Some(range) = query_params.get_range() {
+        log::info!("Range: {range:?}");
+            query = query.filter(timestamps::Column::Ts.between(range.0, range.1));
     }
-
-    let result = query.all(db).await?;
-
-    // Mapping the result to the ResidentTimestamp struct
-    let response: Vec<ResidentTimestamp> = result.into_iter().map(|(timestamp, resident)| {
-            let resident: residents::Model = resident.unwrap();
-            ResidentTimestamp {
-                    id: resident.id,
-                    name: resident.name,
-                    doc: resident.doc,
-                    location: timestamp.location,
-                    ts: timestamp.ts,
-            }
-    }).collect();
-    let response = Response::<ResidentTimestamp>::from_vec(response);
-    Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
+    let result = query.paginate(db, query_params.per_page.unwrap_or(10));
+    let page = query_params.page.unwrap_or(1);
+    let current_page = result.fetch_page(page).await?;
+    let total = result.num_pages().await?;
+    let response: Vec<ResidentTimestamp> = current_page.into_iter().map(|(timestamp, resident)| {
+    let resident: residents::Model = resident.unwrap();
+        ResidentTimestamp {
+            id: resident.id,
+            name: resident.name,
+            doc: resident.doc,
+            location: timestamp.location,
+            ts: timestamp.ts,
+              }
+          }).collect();
+          let response = Response::<ResidentTimestamp>::from_paginator(total, response);
+          return Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
 }
 
 /// POST: /api/timestamps/{timestamp}
