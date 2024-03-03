@@ -120,7 +120,7 @@ function ResidentsTable(props: ResidentsTableProps): JSXElement {
   return (
     <div class="font-mono">
       <div class="overflow-x-auto">
-        <table class="table ">
+        <table class="table table-lg">
           <thead>
             <tr>
               <th>Img</th>

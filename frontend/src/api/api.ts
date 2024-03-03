@@ -27,7 +27,7 @@ export class API {
         return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
       let retResp = response.data;
-      return await retResp;
+      return retResp;
     } catch (err) {
       return { success: false, message: "error" + err, data: [] };
     }
@@ -43,10 +43,10 @@ export class API {
         headers: this.headers,
         data: payload,
       });
-      if (response.status !== 200) {
+      if (response.status !== 200 && response.status !== 201) {
         return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      return await response.data;
+      return response.data;
     } catch (err) {
       return { success: false, message: "error" + err, data: [] };
     }
@@ -59,12 +59,12 @@ export class API {
         headers: this.headers,
         data: payload,
       });
-      if (response.status !== 200) {
+      if (response.status !== 200 && response.status !== 201) {
         return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      return await response.data;
+      return response.data;
     } catch (err) {
-      return { success: false, message: "error" + err, data: [] };
+      return { success: false, message: "error: " + err, data: [] };
     }
   }
 
@@ -92,10 +92,10 @@ export class API {
         method: "DELETE",
         headers: this.headers,
       });
-      if (response.status !== 200) {
+      if (response.status !== 200 && response.status !== 204) {
         return { success: false, message: `error: status ${response.status} ${response.statusText}`, data: [] };
       }
-      return await response.data;
+      return response.data;
     } catch (err) {
       return { success: false, message: "error", data: [] };
     }

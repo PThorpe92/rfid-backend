@@ -1,14 +1,12 @@
 use crate::app_config::DB;
 use crate::middleware::auth::Claims;
-use crate::models::response::Response;
+use crate::models::response::{FilterOpts, Response};
 use actix_web::http::header::ContentType;
 use actix_web::{get, post, web, HttpResponse, Result};
 use entity::prelude::{Accounts, Transactions};
 
 use entity::transactions::{PostTransaction, TransactionResult};
 use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter};
-
-use super::timestamps_controller::FilterOpts;
 
 #[rustfmt::skip]
 #[get("/api/accounts")]
@@ -28,9 +26,9 @@ pub async fn index_accounts(db: web::Data<DB>, auth: Claims, query_params: web::
     if let Some(per_page) = query_params.per_page {
         let paginator = query.paginate(db, per_page);
         let page = query_params.page.unwrap_or(1);
-        let result = paginator.fetch_page(page).await?;
-
-        let response = Response::from_paginator(page, result);
+        let result = paginator.fetch_page(page.saturating_sub(1)).await?;
+        let items_pages = paginator.num_items_and_pages().await?;
+        let response = Response::from_paginator(&items_pages, result);
         return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
             .json(response));
@@ -81,8 +79,9 @@ pub async fn get_all_transactions(db: web::Data<DB>, auth: Claims, query: web::Q
     let per_page = query_params.per_page.unwrap_or(10);
     let page = query_params.page.unwrap_or(1);
     let ts = Transactions::find().paginate(db, per_page);
-    let ts = ts.fetch_page(page - 1).await?;
-    let response = Response::from_paginator(page, ts);
+    let items_pages = ts.num_items_and_pages().await?;
+    let ts = ts.fetch_page(page.saturating_sub(1)).await?;
+    let response = Response::from_paginator(&items_pages, ts);
     Ok(HttpResponse::Ok()
         .insert_header(ContentType::json())
         .json(response))
@@ -106,8 +105,9 @@ pub async fn show_account_transactions(db: web::Data<DB>, id: web::Path<i32>, au
         let ts = entity::transactions::Entity::find()
             .filter(entity::transactions::Column::AccountId.eq(account.id))
             .paginate(db, per_page);
-        let ts = ts.fetch_page(page - 1).await?;
-        let response = Response::from_paginator(page, ts);
+        let items_pages = ts.num_items_and_pages().await?;
+        let ts = ts.fetch_page(page.saturating_sub(1)).await?;
+        let response = Response::from_paginator(&items_pages, ts);
         Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
             .json(response))

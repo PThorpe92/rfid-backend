@@ -1,5 +1,8 @@
-use super::timestamps_controller::FilterOpts;
-use crate::{app_config::DB, middleware::auth::Claims, models::response::Response};
+use crate::{
+    app_config::DB,
+    middleware::auth::Claims,
+    models::response::{FilterOpts, Response},
+};
 use actix_web::{
     get,
     http::header::ContentType,
@@ -70,9 +73,10 @@ pub async fn get_orders(auth: Claims, db: Data<DB>, params: Query<FilterOpts>) -
     }
     if let Some(range) = query_params.get_range() {
         let items = entity::transactions::Entity::find().filter(entity::transactions::Column::Timestamp.between(range.0, range.1)).paginate(db, per_page);
+        let num = items.num_items_and_pages().await?;
         let page = query_params.page.unwrap_or(1);
-        let items = items.fetch_page(page).await?;
-        let response = Response::from_paginator(page, items);
+        let items = items.fetch_page(page.saturating_sub(1)).await?;
+        let response = Response::from_paginator(&num, items);
     return Ok(HttpResponse::Ok()
         .insert_header(ContentType::json())
         .json(response));
@@ -80,8 +84,9 @@ pub async fn get_orders(auth: Claims, db: Data<DB>, params: Query<FilterOpts>) -
         let date = chrono::Utc::now();
         let end = chrono::Utc::now().sub(chrono::Duration::days(1));
         let items = entity::transactions::Entity::find().filter(entity::transactions::Column::Timestamp.between(date, end)).paginate(db, per_page);
-        let items = items.fetch_page(page).await?;
-        let response = Response::from_paginator(page, items);
+        let num = items.num_items_and_pages().await?;
+        let items = items.fetch_page(page.saturating_sub(1)).await?;
+        let response = Response::from_paginator(&num, items);
         return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
             .json(response));

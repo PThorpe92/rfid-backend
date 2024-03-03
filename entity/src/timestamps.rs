@@ -13,7 +13,7 @@ impl OrmSerializable for Model {}
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub rfid: i32,
+    pub doc: i32,
     pub location: i32,
     pub ts: DateTime,
 }
@@ -28,7 +28,7 @@ pub struct ResidentTimestamp {
     pub doc: i32,
     pub name: String,
     pub location: i32,
-    pub ts: DateTime, // Adjust the DateTime type based on your schema
+    pub ts: DateTime,
 }
 
 impl Display for PostTimestamp {
@@ -53,6 +53,12 @@ impl From<(crate::residents::Model, Model)> for ResidentTimestamp {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PostTimestamp {
+    pub rfid: String,
+    pub location: i32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SeedTimestamps {
     pub rfid: i32,
     pub location: i32,
 }
@@ -69,8 +75,8 @@ pub enum Relation {
     Locations,
     #[sea_orm(
         belongs_to = "super::residents::Entity",
-        from = "Column::Rfid",
-        to = "super::residents::Column::Id",
+        from = "Column::Doc",
+        to = "super::residents::Column::Doc",
         on_update = "NoAction",
         on_delete = "NoAction"
     )]

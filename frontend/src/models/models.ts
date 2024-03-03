@@ -4,7 +4,9 @@ export interface SResidentTimestamp {
   doc: number,
   name: string,
   location: number,
+  unit: number,
   ts: string,
+  level: number
 }
 
 export enum ExitType {
@@ -40,7 +42,7 @@ export interface SLocation {
 
 export interface STimestamp {
   [key: string]: string | number | undefined;
-  rfid: string;
+  doc: number;
   location: number;
   ts?: string;
 }

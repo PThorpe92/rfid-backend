@@ -2,7 +2,7 @@ import { createSignal, Show, onMount, For, JSXElement } from 'solid-js';
 import { API } from '../api/api';
 import LocationsDropdown from '../components/LocationsDropdown';
 import DatePicker from '../components/DatePicker'; // Assume you have a DatePicker component
-import { STimestamp, SLocation, SResidentTimestamp, SResident } from '../models/models';
+import { SLocation, SResidentTimestamp } from '../models/models';
 import Navbar from '../components/Navbar';
 
 function ViewReports(): JSXElement {
@@ -13,9 +13,10 @@ function ViewReports(): JSXElement {
   const [resTimestamps, setResTimestamps] = createSignal<SResidentTimestamp[]>([]);
   const [allLocations, setAllLocations] = createSignal<SLocation[]>([]);
   const [totalPages, setTotalPages] = createSignal<number>(1);
-  const [currentPage, setCurrentPage] = createSignal<number>(0);
-  const [unique, setUnique] = createSignal<boolean>(false);
-  const [all, setAll] = createSignal<boolean>(false);
+  const [currentPage, setCurrentPage] = createSignal<number>(1);
+  const [showAllLocations, setShowAllLocations] = createSignal<boolean>(false);
+  const [error, setError] = createSignal<string | null>(null);
+  const [showError, setShowError] = createSignal<boolean>(error() !== null);
 
   const fetchTimestamps = async () => {
     console.log("fetching timestamps");
@@ -25,9 +26,6 @@ function ViewReports(): JSXElement {
     }
     if (startDate() !== '' && endDate() !== '') {
       urlstring += `range=${startDate()};${endDate()}&`;
-    }
-    if (unique()) {
-      urlstring += 'unique=true'
     }
     if (urlstring[urlstring.length - 1] === '&' || urlstring[urlstring.length - 1] === '?') {
       urlstring = urlstring.substring(0, urlstring.length - 1);
@@ -39,6 +37,10 @@ function ViewReports(): JSXElement {
     }
   };
 
+  const sortReverse = () => {
+    setResTimestamps([...resTimestamps().reverse()]);
+  };
+
   const getLocationName = (locationId: number): string => {
     if (allLocations() === undefined || allLocations().length === 0) {
       return `${locationId}`;
@@ -47,16 +49,15 @@ function ViewReports(): JSXElement {
     }
   }
 
-  const handleCheckUnique = () => {
-    setUnique(!unique());
-  }
   const handleShowLocationsDropdown = () => {
+    if (showAllLocations()) {
+      setError("You must un-select 'All locations' to select a specific location.");
+      setShowError(true);
+      return;
+    }
     setShowLocationsDropdown(true);
   };
 
-  const handleHideLocationsDropdown = () => {
-    setShowLocationsDropdown(false);
-  };
   const handleLocationSelect = (locationId: number) => {
     setSelectedLocation(locationId);
     setShowLocationsDropdown(false);
@@ -69,13 +70,15 @@ function ViewReports(): JSXElement {
 
 
   const handleCheckAll = () => {
-    setAll(!all());
+    if (showError()) {
+      setShowError(false);
+    }
+    setShowAllLocations(!showAllLocations());
+    setSelectedLocation(null);
     if (showLocationsDropdown()) {
       setShowLocationsDropdown(false);
     }
   }
-
-
 
   // Fetch all locations for the dropdown
   onMount(async () => {
@@ -87,45 +90,47 @@ function ViewReports(): JSXElement {
   return (
     <>
       <Navbar />
-      <h1 class="flex justify-center text-4xl font-mono mb-4">View Reports</h1>
+      <h1 class="text-4xl font-mono my-8 text-center">View Reports</h1>
 
-      <div class="grid grid-cols-5 gap-4">
-        <div class="col-span-1">
-          <h3 class="text-2xl font-mono">Filter by Location:</h3>
-          <div class="btn-group">
-            <DatePicker label="Start Date" onSelectDate={setStartDate} />
-            <DatePicker label="End Date" onSelectDate={setEndDate} />
-            <div class='btn btn-primary mt-4' onClick={handleShowLocationsDropdown}>Select Location</div>
-            <button class="btn btn-primary mt-4" onClick={fetchTimestamps}>Fetch Timestamps</button>
-            <div class='badge badge-accent badge-lg mt-4' onClick={handleHideLocationsDropdown}>{selectedLocation() ? `Location: ${selectedLocation()}` : '?'}</div>
-            <div class="form-control">
-              <label class="label cursor-pointer">
-                Unique only
-                <input type="checkbox" class="toggle mt-5" onchange={handleCheckUnique} />
-              </label>
-              <label class="label cursor-pointer">
-                All locations
-                <input type="checkbox" class="toggle mt-5" onchange={handleCheckAll} />
-              </label>
-            </div>
+      <div class="flex flex-col items-center">
+        <div class="flex flex-wrap justify-center gap-4 mb-8">
+          <DatePicker label="Start Date" onSelectDate={setStartDate} />
+          <DatePicker label="End Date" onSelectDate={setEndDate} />
+          <div class="pt-5 inline-flex">
+            <button class='btn btn-outline' onClick={handleShowLocationsDropdown}>Location</button>
+            <button class="btn btn-outline" onClick={fetchTimestamps}>Get Scan Events</button>
+            <div class='badge badge-accent badge-lg'>{selectedLocation() ? `Location: ${selectedLocation()}` : '?'}</div>
           </div>
-          <Show when={showLocationsDropdown() && !all()}>
-            <LocationsDropdown
-              locations={allLocations()}
-              onLocationSelect={(locationId: number) => handleLocationSelect(locationId)}
-              onClose={() => { }}
-              residents={[]}
-            />
-          </Show>
+          <div class="form-control">
+            <label class="label cursor-pointer flex items-center gap-2">
+              All locations
+              <input type="checkbox" class="toggle" onchange={handleCheckAll} />
+            </label>
+          </div>
         </div>
-        <div class="col-span-4 overflow-x-auto">
-          <table class="table table-zebra">
+        <Show when={showError()}>
+          <div class="tooltip-error">
+            {error()}
+          </div>
+        </Show>
+        <Show when={showLocationsDropdown() && !showAllLocations()}>
+          <LocationsDropdown
+            locations={allLocations()}
+            onLocationSelect={(locationId: number) => handleLocationSelect(locationId)}
+            open={showLocationsDropdown()}
+            onClose={() => setShowLocationsDropdown(false)}
+            residents={[]}
+          />
+        </Show>
+
+        <div class="w-full max-w-5xl overflow-x-auto">
+          <table class="table table-zebra w-full">
             <thead>
               <tr>
                 <th>Img</th>
                 <th>Location</th>
-                <th>Time</th>
-                <th>Name</th>
+                <th>Scan Event Time</th>
+                <th>Resident Name</th>
                 <th>DOC</th>
               </tr>
             </thead>
@@ -155,22 +160,24 @@ function ViewReports(): JSXElement {
               </For>
             </tbody>
           </table>
-          <div class="flex justify-center gap-4 my-4">
-            <For each={Array.from({ length: totalPages() })}>
-              {(_, index) => (
-                <button
-                  class="btn btn-xs"
-                  onClick={() => handlePageChange(index() + 1)}
-                  classList={{ "btn-active": currentPage() === index() + 1 }}
-                >
-                  {index() + 1}
-                </button>
-              )}
-            </For>
-          </div>
+        </div>
+        <div class="flex justify-center gap-4 my-4">
+          <For each={Array.from({ length: totalPages() })}>
+            {(_, index) => (
+              <button
+                class="btn btn-xs"
+                onClick={() => handlePageChange(index())}
+                classList={{ "btn-active": currentPage() === index() + 1 }}
+              >
+                {index() + 1}
+              </button>
+            )}
+          </For>
+          <input type="checkbox" class="toggle" onchange={sortReverse} />
+          <label class="label cursor-pointer flex items-center gap-2">Sort Asc/Desc</label>
         </div>
       </div>
     </>
   );
-}
+};
 export default ViewReports;

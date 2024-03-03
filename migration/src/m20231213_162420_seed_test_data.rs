@@ -1,6 +1,6 @@
 use entity::residents;
 use entity::timestamps;
-use entity::timestamps::PostTimestamp;
+use entity::timestamps::SeedTimestamps;
 use sea_orm::Set;
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::sea_orm::EntityTrait;
@@ -31,11 +31,11 @@ impl MigrationTrait for Migration {
             .exec(db)
             .await?;
         let timestamps = std::fs::read_to_string("seed_data/timestamps.json").unwrap();
-        let timestamps = serde_json::from_str::<Vec<PostTimestamp>>(&timestamps).unwrap();
+        let timestamps = serde_json::from_str::<Vec<SeedTimestamps>>(&timestamps).unwrap();
         let timestamps: Vec<timestamps::ActiveModel> = timestamps
             .iter()
             .map(|ts| timestamps::ActiveModel {
-                rfid: Set(ts.rfid.to_owned()),
+                doc: Set(ts.rfid.to_owned()),
                 location: Set(ts.location.to_owned()),
                 ..Default::default()
             })

@@ -22,11 +22,7 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(timestamps::Column::Rfid)
-                            .integer()
-                            .default(00000000000000000),
-                    )
+                    .col(ColumnDef::new(timestamps::Column::Doc).integer().not_null())
                     .col(
                         ColumnDef::new(timestamps::Column::Location)
                             .integer()
@@ -36,7 +32,8 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(timestamps::Column::Ts)
                             .date_time()
                             .timestamp()
-                            .default(chrono::Local::now()),
+                            .default(chrono::Local::now())
+                            .not_null(),
                     )
                     .to_owned(),
             )
@@ -45,8 +42,8 @@ impl MigrationTrait for Migration {
             .create_foreign_key(
                 ForeignKey::create()
                     .name("fk_timestamps_residents")
-                    .from(Timestamps, timestamps::Column::Rfid)
-                    .to(Residents, residents::Column::Id)
+                    .from(Timestamps, timestamps::Column::Doc)
+                    .to(Residents, residents::Column::Doc)
                     .on_delete(ForeignKeyAction::SetDefault)
                     .to_owned(),
             )

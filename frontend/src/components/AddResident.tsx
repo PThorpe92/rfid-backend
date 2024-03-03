@@ -175,7 +175,7 @@ function AddResidentModal(props: AddResidentModalProps): JSXElement {
               type="text"
               placeholder="Doc#"
               class="input input-bordered w-full max-w-xs"
-              onInput={(e) => updateField("doc", e.currentTarget.value)}
+              onInput={(e) => updateField("doc", parseInt(e.currentTarget.value, 10))}
             />
             {/* We'll get the Character for the unit and convert to ID */}
             <div class="grid grid-flow-row">

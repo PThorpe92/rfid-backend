@@ -1,15 +1,16 @@
 import { createSignal, For, JSXElement, onMount, Show } from 'solid-js';
 import { ExitType, SItem } from '../models/models';
 import { API } from '../api/api';
-import toast from 'solid-toast';
+import toast, { Toaster } from 'solid-toast';
 import UpdateInventory from './UpdateInventory';
 import AddItemModal from './AddItem';
 
+export interface ItemsTableProps {
+  items: SItem[];
+}
 
+function ItemsTable(props: ItemsTableProps): JSXElement {
 
-function Items(): JSXElement {
-
-  const [location, setLocation] = createSignal(0);
   const [showUploadPhoto, setShowUploadPhoto] = createSignal(false);
   const [allItems, setAllItems] = createSignal<SItem[]>([]);
   const [selectedItem, setSelectedItem] = createSignal<SItem | null>(null);
@@ -17,12 +18,24 @@ function Items(): JSXElement {
   const [showDeleteItem, setShowDeleteItem] = createSignal(false);
   const [showAddItem, setShowAddItem] = createSignal(false);
   const [selectedItemNumber, setSelectedItemNumber] = createSignal(0);
+  const [currentPage, setCurrentPage] = createSignal(1);
+  const [totalPages, setTotalPages] = createSignal(1);
+  const [pageLimit, setPageLimit] = createSignal(10);
+
   const getAllItems = async () => {
     const res = await API.GET("items?all=true");
     if (res?.data) {
       setAllItems(res.data as SItem[]);
     }
   };
+
+  const getCurrentPageItems = async () => {
+    const res = await API.GET(`items?page=${pageLimit()}&limit=${currentPage()}`);
+    if (res?.data) {
+      setAllItems(res.data as SItem[]);
+    }
+  };
+
 
   const handleSelectItem = (item: SItem) => {
     setSelectedItem(item);
@@ -86,6 +99,11 @@ function Items(): JSXElement {
     setShowDeleteItem(true);
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    getCurrentPageItems();
+  };
+
   onMount(() => {
     if (allItems().length === 0) {
       getAllItems;
@@ -94,6 +112,19 @@ function Items(): JSXElement {
 
   return (
     <div class="font-mono">
+      <Toaster
+        position="top-center"
+        gutter={8}
+        containerClassName="badge badge-xl badge-success"
+        toastOptions={{
+          className: "toast",
+          duration: 7000,
+          style: {
+            background: "#2b2b2b",
+            color: "#02eb48",
+          },
+        }}
+      />
       <div class="overflow-x-auto">
         <div class="flex justify-between">
           <div class="btn btn-primary" onClick={() => setShowAddItem(true)}>
@@ -218,6 +249,19 @@ function Items(): JSXElement {
           Close
         </button>
       </div>
+      <div class="flex justify-center gap-4 my-4">
+        <For each={Array.from({ length: totalPages() })}>
+          {(_, index) => (
+            <button
+              class="btn btn-xs"
+              onClick={() => handlePageChange(index() + 1)}
+              classList={{ "btn-active": currentPage() === index() + 1 }}
+            >
+              {index() + 1}
+            </button>
+          )}
+        </For>
+      </div>
     </div>
   );
-} export default Items;
+} export default ItemsTable;

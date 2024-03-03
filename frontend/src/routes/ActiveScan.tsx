@@ -8,13 +8,14 @@ import { Toaster, toast } from "solid-toast";
 import AddResident from "../components/AddResident";
 
 function ActiveScan() {
+  // make this residents
   const [residents, setResidents] = createSignal<SResident[]>([]);
   const [showModal, setShowModal] = createSignal<boolean>(false);
   const [showTable, setShowTable] = createSignal<boolean>(false);
   const [allLocations, setAllLocations] = createSignal<SLocation[]>([]);
   const [allResidents, setAllResidents] = createSignal<SResident[]>([]);
   const [currentScanLocation, setCurrentScanLocation] = createSignal<number>(0);
-  const [lastResidentScanned, setLastResidentScanned] = createSignal<SResident | null>(null);
+  const [lastResidentScanned, setLastResidentScanned] = createSignal<SResidentTimestamp | null>(null);
   const [showAddResident, setShowAddResident] = createSignal(false);
 
   let intervalId: number | undefined;
@@ -34,7 +35,7 @@ function ActiveScan() {
   const ENTER_KEY = "Enter";
   const INPUT_TIMEOUT = 100;
 
-  const PAGE_SIZE = 10; // Set your desired page size
+  const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = createSignal(1);
 
   const getSortedResidents = () => {
@@ -51,9 +52,13 @@ function ActiveScan() {
       });
   };
 
-  const paginatedResidents = () => {
-    const startIndex = (currentPage() - 1) * PAGE_SIZE;
-    return getSortedResidents().slice(startIndex, startIndex + PAGE_SIZE);
+  const lookupLocationName = (locationId: number): string => {
+    if (allLocations() === undefined || allLocations().length === 0) {
+      return "";
+    } else {
+      let loc = allLocations().find((location) => location.id === locationId)!;
+      return loc.name;
+    }
   };
 
   const handleAddResidentClose = () => {
@@ -68,61 +73,46 @@ function ActiveScan() {
     setShowAddResident(true);
   };
 
-  const handleRFIDScan = async (rfid: string) => {
-    console.log("handleRFIDScan");
+  const handlePromptLocation = (resident: SResidentTimestamp, rfid: string): number => {
+    // Prompt for destination ID
+    const destinationId = parseInt(prompt("Please enter your destination ID:") || "", 10);
+    if (destinationId !== undefined && destinationId === currentScanLocation()) {
+      toast.error("Destination ID cannot be the same as current location.");
+      handlePromptLocation(resident, rfid);
+    } else if (destinationId !== undefined && destinationId > 0) {
+      return destinationId as number;
+    };
+    return handlePromptLocation(resident, rfid);
+  };
+
+  const handleRFIDScan = async (rfid: string, loc: number) => {
     try {
+      if (loc === undefined) {
+        loc = currentScanLocation();
+      }
       const response = await API.POST("timestamps", {
         rfid: rfid,
-        location: currentScanLocation(),
+        location: loc,
       });
-      if (response && response.data) {
+      if (response.success) {
         const resident: SResidentTimestamp = response.data!.at(
           0,
         ) as SResidentTimestamp;
-        if (resident.resident.current_location === 0) {
-          // Prompt for destination ID
-          const destinationId = prompt("Please enter your destination ID:");
-          if (destinationId) {
-            // Send another POST request with the destination ID
-            const response = await API.POST("timestamps", {
-              rfid,
-              location: parseInt(destinationId, 10),
-            });
-            if (response && response.data) {
-              const resident: SResidentTimestamp = response.data!.at(
-                0,
-              ) as SResidentTimestamp;
-              toast.success(
-                `Resident ${resident.resident.name} is now at ${resident.resident.current_location}`,
-              );
-              let updatedResidents = residents().filter((res: SResident) => res.rfid !== resident.resident.rfid);
-              updatedResidents.push(resident.resident);
-              setResidents(updatedResidents);
-              setLastResidentScanned(resident.resident);
-            }
-          } else {
-            // Handle case where destination ID is not entered
-            toast.error(
-              "No destination ID entered, Resident: " +
-              resident.resident.name +
-              " now signed out.",
-            );
-            setLastResidentScanned(resident.resident);
-          }
-        } else {
-          // Handle normal case where resident is signing in/out
-          toast.success(
-            `Resident ${resident.resident.name} is now at ${resident.resident.current_location}`,
-          );
-          let updatedResidents = residents().filter((res: SResident) => res.rfid !== resident.resident.rfid);
-          updatedResidents.push(resident.resident);
-          setResidents(updatedResidents);
-          setLastResidentScanned(resident.resident);
+        if (resident.location === 0) {
+          const location = handlePromptLocation(resident, rfid);
+          handleRFIDScan(rfid, location);
+          return;
         }
-      } else {
-        toast.error("Resident not found");
+        refetchData();
+        toast.success(
+          `Resident ${resident.name} is now at ${resident.location}`,
+        );
+        setLastResidentScanned(resident);
+        return;
       }
+      toast.error("Resident not found");
     } catch (error) {
+      console.log(error);
       toast.error("Error processing RFID scan, please try again");
     }
   };
@@ -134,7 +124,7 @@ function ActiveScan() {
     if (event.key === ENTER_KEY) {
       if (scannedRFID.length === RFID_LENGTH) {
         console.log("RFID scanned: " + scannedRFID);
-        handleRFIDScan(scannedRFID);
+        handleRFIDScan(scannedRFID, currentScanLocation());
         scannedRFID = "";
       } else {
         scannedRFID = "";
@@ -173,9 +163,9 @@ function ActiveScan() {
     }
   }
 
-  const refetchData = () => {
+  const refetchData = async () => {
     try {
-      getResidentsByLocation(currentScanLocation());
+      await getResidentsByLocation(currentScanLocation());
     } catch (error) {
       console.error("Error fetching residents:", error);
     }
@@ -188,6 +178,7 @@ function ActiveScan() {
     setShowModal(false);
     setShowTable(true);
     initRFIDScanner();
+    refetchData();
   };
 
   const getResidentsByLocation = async (locationId: number) => {
@@ -213,11 +204,6 @@ function ActiveScan() {
     getAllLocations();
     // show the modal to select a location
     setShowModal(true);
-    intervalId = setInterval(() => {
-      if (currentScanLocation()) {
-        refetchData();
-      }
-    }, 2000);
   });
 
   onCleanup(() => {
@@ -247,13 +233,14 @@ function ActiveScan() {
       <h1 class="flex justify-center text-xl font-mono">
         Active Scan and Attendance
       </h1>
-      {currentScanLocation() === 0 ? "" : <h2 class="flex justify-center text-xl font-mono">Location {currentScanLocation()}</h2>}
+      {currentScanLocation() === 0 ? "" : <h2 class="flex justify-center text-xl font-mono">Location {currentScanLocation()}: {lookupLocationName(currentScanLocation())}</h2>}
 
       <Show when={showModal()}>
         <div class="flex justify-center">
           <LocationsDropdown
             locations={allLocations()}
             residents={allResidents()}
+            open={showModal()}
             onClose={() => setShowModal(false)}
             onLocationSelect={handleLocationChange}
           />
@@ -278,7 +265,7 @@ function ActiveScan() {
           {/* Residents Table */}
           <Show when={showTable()}>
             <ResidentsTable
-              residents={paginatedResidents()}
+              residents={residents()}
               onRefresh={refetchData}
               locations={allLocations()}
               currentScanLocation={currentScanLocation()}
@@ -308,5 +295,4 @@ function ActiveScan() {
     </>
   );
 }
-
 export default ActiveScan;

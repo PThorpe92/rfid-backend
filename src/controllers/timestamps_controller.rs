@@ -1,6 +1,8 @@
-use crate::{app_config::DB, models::response::Response};
+use crate::{
+    app_config::DB,
+    models::response::{FilterOpts, Response, SortOrder},
+};
 use actix_web::{get, http::header::ContentType, post, web, HttpResponse};
-use chrono::NaiveDate;
 use entity::{
     residents::{self, Entity as Resident},
     timestamps::{self, Entity as Timestamp, PostTimestamp, ResidentTimestamp},
@@ -8,42 +10,10 @@ use entity::{
 use reqwest::StatusCode;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter,
-    QuerySelect, Set,
+    QueryOrder, Set,
 };
-use serde::Deserialize;
-
-#[derive(Debug, Deserialize)]
-pub struct FilterOpts {
-    // query string parameters
-    pub unique: Option<bool>,
-    pub per_page: Option<u64>,
-    pub page: Option<u64>,
-    pub all: Option<bool>,
-    pub range: Option<String>,
-    pub location: Option<i32>,
-    pub rfid: Option<String>,
-    pub doc: Option<i32>,
-    pub order_id: Option<i32>,
-}
-impl FilterOpts {
-    pub fn get_range(&self) -> Option<(NaiveDate, NaiveDate)> {
-        if let Some(range) = self.range.clone() {
-            let range: Vec<&str> = range.split(';').collect();
-            if range.len() == 2 {
-                let start_date = range[0];
-                let end_date = range[1];
-                // date string format: 2024-02-19
-                let start_date = NaiveDate::parse_from_str(start_date, "%Y:%m:%d").ok()?;
-                let end_date = NaiveDate::parse_from_str(end_date, "%Y:%m:%d").ok()?;
-                return Some((start_date, end_date));
-            }
-        }
-        None
-    }
-}
 
 #[rustfmt::skip]
-
 #[get("/api/timestamps")]
 pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
@@ -53,17 +23,22 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
     if let Some(location) = query_params.location {
         query = query.filter(timestamps::Column::Location.eq(location));
     }
-    if let Some(true) = query_params.unique {
-        query = query.distinct_on([(residents::Entity, residents::Column::Id)]);
-    }
     if let Some(range) = query_params.get_range() {
-        log::info!("Range: {range:?}");
+            log::debug!("Range: {range:?}");
             query = query.filter(timestamps::Column::Ts.between(range.0, range.1));
     }
+    if let Some(doc) = query_params.doc {
+        query = query.filter(timestamps::Column::Doc.eq(doc));
+    }
+    match query_params.sort_order() {
+        SortOrder::Asc => query = query.order_by_asc(timestamps::Column::Ts),
+    SortOrder::Desc => query = query.order_by_desc(timestamps::Column::Ts),
+    }
+    query = query.order_by_desc(timestamps::Column::Ts);
     let result = query.paginate(db, query_params.per_page.unwrap_or(10));
     let page = query_params.page.unwrap_or(1);
-    let current_page = result.fetch_page(page).await?;
-    let total = result.num_pages().await?;
+    let current_page = result.fetch_page(page.saturating_sub(1)).await?;
+    let total = result.num_items_and_pages().await?;
     let response: Vec<ResidentTimestamp> = current_page.into_iter().map(|(timestamp, resident)| {
     let resident: residents::Model = resident.unwrap();
         ResidentTimestamp {
@@ -72,13 +47,12 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
             doc: resident.doc,
             location: timestamp.location,
             ts: timestamp.ts,
-              }
+        }
           }).collect();
-          let response = Response::<ResidentTimestamp>::from_paginator(total, response);
+          let response = Response::<ResidentTimestamp>::from_paginator(&total, response);
           return Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(response))
 }
 
-/// POST: /api/timestamps/{timestamp}
 #[rustfmt::skip]
 #[post("/api/timestamps")]
 pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTimestamp>) -> Result<HttpResponse, Box<dyn std::error::Error>>{
@@ -93,15 +67,13 @@ pub async fn store_timestamp(db: web::Data<DB>, timestamp_data: web::Json<PostTi
                 } else {
                     resident.current_location = Set(timestamp.location);
                 }
-
                 let updated_resident = resident.save(db).await?;
                 let new_timestamp: timestamps::ActiveModel = timestamps::ActiveModel {
-                        rfid: Set(updated_resident.id.to_owned().unwrap()),
+                        doc: Set(updated_resident.doc.to_owned().unwrap()),
                         location: Set(updated_resident.current_location.to_owned().unwrap()),
                     ..Default::default()
                 };
                 let new_ts = new_timestamp.save(db).await?;
-
                 let response = Response::<ResidentTimestamp>::from_data(ResidentTimestamp {
                     id: updated_resident.id.to_owned().unwrap(),
                     name: updated_resident.name.to_owned().unwrap(),

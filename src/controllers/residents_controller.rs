@@ -1,6 +1,5 @@
-use super::timestamps_controller::FilterOpts;
 use crate::app_config::DB;
-use crate::models::response::Response;
+use crate::models::response::{FilterOpts, ResidentHours, Response};
 use actix_multipart::form::tempfile::TempFile;
 use actix_multipart::form::MultipartForm;
 use actix_web::{
@@ -8,6 +7,7 @@ use actix_web::{
     http::{header, StatusCode},
     patch, post, web, HttpResponse,
 };
+use chrono::NaiveDateTime;
 use entity::prelude::UpdateResident;
 use entity::{
     residents::{self, Entity as Resident},
@@ -17,6 +17,7 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set, TryIntoModel,
 };
 use std::path::PathBuf;
+
 #[derive(MultipartForm)]
 pub struct FormData {
     pub file: TempFile,
@@ -71,9 +72,9 @@ pub async fn index(db: web::Data<DB>,params: web::Query<FilterOpts>) -> Result<H
     let per_page = params.per_page.unwrap_or(10);
     let page = params.page.unwrap_or(1);
     let residents = Resident::find().filter(residents::Column::IsDeleted.eq(false)).paginate(db, per_page);
-    let resp = residents.fetch_page(page - 1).await?;
-    let total_pages = residents.num_pages().await?;
-    let response = Response::from_paginator(total_pages, resp);
+    let resp = residents.fetch_page(page.saturating_sub(1)).await?;
+    let total_pages = residents.num_items_and_pages().await?;
+    let response = Response::from_paginator(&total_pages, resp);
     Ok(HttpResponse::Ok()
         .insert_header(header::ContentType::json())
         .json(response))
@@ -81,10 +82,10 @@ pub async fn index(db: web::Data<DB>,params: web::Query<FilterOpts>) -> Result<H
 
 #[rustfmt::skip]
 #[get("/api/residents/{rfid}")]
-pub async fn show(db: web::Data<DB>, rfid: actix_web::web::Path<String>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+pub async fn show(db: web::Data<DB>, doc: actix_web::web::Path<i32>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
-    let rfid = rfid.into_inner();
-    if let Ok(resident) = Resident::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await {
+    let doc = doc.into_inner();
+    if let Ok(resident) = Resident::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Doc.eq(doc)).one(db).await {
     if resident.is_none() {
         let error = Response::<String>::from_error("Error retrieving residents");
         return Ok(HttpResponse::Ok()
@@ -97,6 +98,52 @@ pub async fn show(db: web::Data<DB>, rfid: actix_web::web::Path<String>) -> Resu
         let response = Response::<String>::from_error("Error retrieving residents");
         Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
     }
+}
+
+#[rustfmt::skip]
+#[get("/api/residents/{doc}/hours")]
+pub async fn get_resident_hours(db: web::Data<DB>, path: web::Path<i32>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+    // This function returns the hours a resident spent in a certain location in a given period
+    // (range query parameter) is the range of time. We will need to get all the timestamps for the resident
+    // and calculate the time spent in just the location
+    let db = &db.0;
+    let path = path.into_inner();
+    let query = query.into_inner();
+    let range = query.get_range().unwrap_or_default();
+    let beg = range.0;
+    let end = range.1;
+    let loc = query.location.unwrap_or(0);
+    let hours = timestamps::Entity::find()
+        .filter(timestamps::Column::Doc.eq(path))
+        .filter(timestamps::Column::Ts.between(beg, end))
+        .all(db)
+        .await?;
+    log::debug!("Hours: {:?}", hours);
+    // iterate through the timestamps and calculate the hours spent in the location
+    let mut last_ts: NaiveDateTime = NaiveDateTime::default();
+    let mut should_add = false;
+    let total: f32 = hours.iter().fold(0.0, | acc, timestamp | {
+        if timestamp.location == loc {
+            last_ts = timestamp.ts;
+            should_add = true;
+            acc
+        } else if should_add {
+        let diff = timestamp.ts.signed_duration_since(last_ts);
+        let hours = diff.num_seconds() as f32 / 3600.0;
+            last_ts = timestamp.ts;
+            should_add = false;
+            acc + hours
+        } else {
+            acc
+        }
+    });
+    let result: ResidentHours = ResidentHours {
+        resident_doc: path,
+        location: loc,
+        hours: total,
+    };
+    let response: Response<ResidentHours> = Response::from_data(result);
+    Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
 }
 
 #[rustfmt::skip]
@@ -138,7 +185,7 @@ pub async fn update(db: web::Data<DB>, rfid: actix_web::web::Path<String>, resid
         return Ok(HttpResponse::Ok()
             .insert_header(header::ContentType::json())
             .json(error));
-    } else {
+    } 
         let mut to_update: residents::ActiveModel = to_update.unwrap().into();
         to_update.rfid = Set(resident.rfid.unwrap_or_else(|| to_update.rfid.unwrap()));
         to_update.name = Set(resident.name.unwrap_or_else(|| to_update.name.unwrap()));
@@ -149,54 +196,7 @@ pub async fn update(db: web::Data<DB>, rfid: actix_web::web::Path<String>, resid
         let updated = to_update.save(db).await?;
         let response: Response<residents::Model> = Response::from_data(updated.try_into_model()?);
         Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
-    }
-
-} else {
+    } else {
         Ok(HttpResponse::Ok().body("Error updating resident"))
-    }
-}
-
-#[rustfmt::skip]
-#[get("/api/residents/{rfid}/timestamps")]
-pub async fn show_resident_timestamps(db: web::Data<DB>, rfid: actix_web::web::Path<String>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    let query_params = query.into_inner();
-    let per_page = query_params.per_page.unwrap_or(10);
-    let page = query_params.page.unwrap_or(1);
-    let db = &db.0;
-    let rfid = rfid.into_inner();
-    if let Some(resident) = residents::Entity::find().filter(residents::Column::IsDeleted.eq(false)).filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await? {
-    let ts = timestamps::Entity::find()
-        .filter(timestamps::Column::Rfid.eq(resident.id))
-        .paginate(db, per_page);
-    let ts = ts.fetch_page(page - 1).await?;
-    let response: Response<timestamps::Model> = Response::from_vec(ts);
-    Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
-     } else {
-    let response = Response::<String>::from_error("Error retrieving timestamps");
-    Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
-    }
-}
-
-#[rustfmt::skip]
-#[get("/api/residents/{rfid}/timestamps")]
-pub async fn show_resident_timestamps_range(db: web::Data<DB>, rfid: actix_web::web::Path<String>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    let query_params = query.into_inner();
-    let per_page = query_params.per_page.unwrap_or(10);
-    let page = query_params.page.unwrap_or(1);
-    let db = &db.0;
-    let rfid = rfid.into_inner();
-    let range = query_params.range.unwrap_or(format!("{},{}", chrono::Local::now(), chrono::Local::now()));
-    let beg = range.split(',').collect::<Vec<&str>>()[0];
-    let end = range.split(',').collect::<Vec<&str>>()[1];
-    if let Some(resident) = residents::Entity::find().filter(residents::Column::Rfid.eq(rfid.clone())).one(db).await? {
-    let ts = timestamps::Entity::find()
-        .filter(timestamps::Column::Rfid.eq(resident.id)).filter(timestamps::Column::Ts.between(beg, end))
-        .paginate(db, per_page);
-    let ts = ts.fetch_page(page - 1).await?;
-    let response: Response<timestamps::Model> = Response::from_vec(ts);
-    Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
-     } else {
-    let response = Response::<String>::from_error("Error retrieving timestamps");
-    Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
     }
 }
