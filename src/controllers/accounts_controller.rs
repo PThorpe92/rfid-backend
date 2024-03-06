@@ -11,7 +11,7 @@ use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter};
 #[rustfmt::skip]
 #[get("/api/accounts")]
 pub async fn index_accounts(db: web::Data<DB>, auth: Claims, query_params: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !auth.valid {
+    if !auth.is_valid() {
         let response = Response::<String>::from_error("Unauthorized");
         return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
@@ -43,7 +43,7 @@ pub async fn index_accounts(db: web::Data<DB>, auth: Claims, query_params: web::
 #[rustfmt::skip]
 #[get("/api/accounts/{id}")]
 pub async fn show_account(db: web::Data<DB>,id: web::Path<i32>, auth: Claims) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !auth.valid {
+    if !auth.is_valid() {
         let response = Response::<String>::from_error("Unauthorized");
         return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
@@ -68,7 +68,7 @@ pub async fn show_account(db: web::Data<DB>,id: web::Path<i32>, auth: Claims) ->
 #[rustfmt::skip]
 #[get("/api/transactions")]
 pub async fn get_all_transactions(db: web::Data<DB>, auth: Claims, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !auth.valid {
+    if !auth.is_valid() {
         let response = Response::<String>::from_error("Unauthorized");
         return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
@@ -90,7 +90,7 @@ pub async fn get_all_transactions(db: web::Data<DB>, auth: Claims, query: web::Q
 #[rustfmt::skip]
 #[get("/api/accounts/{id}/transactions")]
 pub async fn show_account_transactions(db: web::Data<DB>, id: web::Path<i32>, auth: Claims, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !auth.valid {
+    if !auth.is_valid() {
         let response = Response::<String>::from_error("Unauthorized");
         return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
@@ -101,7 +101,7 @@ pub async fn show_account_transactions(db: web::Data<DB>, id: web::Path<i32>, au
     let page = query_params.page.unwrap_or(1);
     let db = &db.0;
     let id = id.into_inner();
-    if let Some(account) = Accounts::find().filter(entity::accounts::Column::ResidentId.eq(id)).one(db).await? {
+    if let Some(account) = Accounts::find().filter(entity::accounts::Column::Doc.eq(id)).one(db).await? {
         let ts = entity::transactions::Entity::find()
             .filter(entity::transactions::Column::AccountId.eq(account.id))
             .paginate(db, per_page);
@@ -122,7 +122,7 @@ pub async fn show_account_transactions(db: web::Data<DB>, id: web::Path<i32>, au
 #[rustfmt::skip]
 #[post("/api/accounts/{id}/transactions")]
 pub async fn post_transaction(db: web::Data<DB>, id: web::Path<i32>, auth: Claims, transaction: web::Json<PostTransaction>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !auth.valid {
+    if !auth.is_valid() {
         let response = Response::<String>::from_error("Unauthorized");
         return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())

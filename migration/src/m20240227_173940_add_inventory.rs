@@ -9,22 +9,22 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(InventoryEvent::Table)
+                    .table(InventoryEvents::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(InventoryEvent::Id)
+                        ColumnDef::new(InventoryEvents::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(InventoryEvent::ItemId).integer().not_null())
+                    .col(ColumnDef::new(InventoryEvents::ItemId).integer().not_null())
                     .col(
-                        ColumnDef::new(InventoryEvent::Quantity)
+                        ColumnDef::new(InventoryEvents::Quantity)
                             .integer()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(InventoryEvent::IsAdd).boolean().not_null())
+                    .col(ColumnDef::new(InventoryEvents::IsAdd).boolean().not_null())
                     .to_owned(),
             )
             .await?;
@@ -32,7 +32,7 @@ impl MigrationTrait for Migration {
             .create_foreign_key(
                 ForeignKey::create()
                     .name("fk_inventory_event_item")
-                    .from(InventoryEvent::Table, InventoryEvent::ItemId)
+                    .from(InventoryEvents::Table, InventoryEvents::ItemId)
                     .to(entity::items::Entity, entity::items::Column::Id)
                     .to_owned(),
             )
@@ -41,13 +41,13 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(InventoryEvent::Table).to_owned())
+            .drop_table(Table::drop().table(InventoryEvents::Table).to_owned())
             .await
     }
 }
 
 #[derive(DeriveIden)]
-enum InventoryEvent {
+enum InventoryEvents {
     Table,
     Id,
     ItemId,

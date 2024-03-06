@@ -20,8 +20,14 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(Items::Upc).string().not_null())
                     .col(ColumnDef::new(Items::Name).string().not_null())
-                    .col(ColumnDef::new(Items::Price).money().not_null())
+                    .col(ColumnDef::new(Items::Price).integer().not_null())
                     .col(ColumnDef::new(Items::Quantity).integer().not_null())
+                    .col(
+                        ColumnDef::new(Items::IsDeleted)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
                     .to_owned(),
             )
             .await
@@ -42,4 +48,5 @@ enum Items {
     Name,
     Price,
     Quantity,
+    IsDeleted,
 }

@@ -9,26 +9,28 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Transaction::Table)
+                    .table(Transactions::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(Transaction::Id)
+                        ColumnDef::new(Transactions::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
+                    .col(ColumnDef::new(Transactions::AccountId).integer().not_null())
+                    .col(ColumnDef::new(Transactions::Doc).integer().not_null())
+                    .col(ColumnDef::new(Transactions::Amount).integer().not_null())
                     .col(
-                        ColumnDef::new(Transaction::ResidentId)
-                            .integer()
+                        ColumnDef::new(Transactions::Kind)
+                            .string()
                             .not_null()
-                            .unique_key(),
+                            .default("credit"),
                     )
-                    .col(ColumnDef::new(Transaction::Amount).integer().not_null())
-                    .col(ColumnDef::new(Transaction::Kind).string().not_null())
                     .col(
-                        ColumnDef::new(Transaction::Timestamp)
+                        ColumnDef::new(Transactions::Timestamp)
                             .timestamp()
+                            .default(chrono::Local::now())
                             .not_null(),
                     )
                     .to_owned(),
@@ -37,18 +39,29 @@ impl MigrationTrait for Migration {
         manager
             .create_index(
                 Index::create()
-                    .table(Transaction::Table)
+                    .table(Transactions::Table)
                     .name("idx_resident_id")
-                    .col(Transaction::ResidentId)
+                    .col(Transactions::Doc)
                     .to_owned(),
             )
             .await?;
         manager
             .create_index(
                 Index::create()
-                    .table(Transaction::Table)
+                    .table(Transactions::Table)
                     .name("idx_type")
-                    .col(Transaction::Kind)
+                    .col(Transactions::Kind)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .create_foreign_key(
+                ForeignKey::create()
+                    .name("fk_transaction_account_id")
+                    .from(Transactions::Table, Transactions::AccountId)
+                    .to(entity::accounts::Entity, entity::accounts::Column::Id)
+                    .on_delete(ForeignKeyAction::NoAction)
+                    .on_update(ForeignKeyAction::NoAction)
                     .to_owned(),
             )
             .await?;
@@ -56,7 +69,7 @@ impl MigrationTrait for Migration {
             .create_foreign_key(
                 ForeignKey::create()
                     .name("fk_transaction_resident_id")
-                    .from(Transaction::Table, Transaction::ResidentId)
+                    .from(Transactions::Table, Transactions::Doc)
                     .to(entity::residents::Entity, entity::residents::Column::Doc)
                     .on_delete(ForeignKeyAction::NoAction)
                     .on_update(ForeignKeyAction::NoAction)
@@ -67,16 +80,17 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Transaction::Table).to_owned())
+            .drop_table(Table::drop().table(Transactions::Table).to_owned())
             .await
     }
 }
 
 #[derive(DeriveIden)]
-enum Transaction {
+enum Transactions {
     Table,
     Id,
-    ResidentId,
+    AccountId,
+    Doc,
     Amount,
     Kind,
     Timestamp,

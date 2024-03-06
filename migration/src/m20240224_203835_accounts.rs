@@ -13,17 +13,18 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(
                         ColumnDef::new(Accounts::Id)
-                            .integer()
+                            .auto_increment()
                             .not_null()
+                            .integer()
                             .primary_key(),
                     )
                     .col(
-                        ColumnDef::new(Accounts::ResidentId)
+                        ColumnDef::new(Accounts::Doc)
                             .integer()
                             .not_null()
                             .unique_key(),
                     )
-                    .col(ColumnDef::new(Accounts::Balance).money().not_null())
+                    .col(ColumnDef::new(Accounts::Balance).integer().not_null())
                     .col(
                         ColumnDef::new(Accounts::IsDeleted)
                             .boolean()
@@ -37,7 +38,7 @@ impl MigrationTrait for Migration {
             .create_foreign_key(
                 ForeignKey::create()
                     .name("fk_resident_doc")
-                    .from(Accounts::Table, Accounts::ResidentId)
+                    .from(Accounts::Table, Accounts::Doc)
                     .to(entity::residents::Entity, entity::residents::Column::Doc)
                     .on_delete(ForeignKeyAction::NoAction)
                     .to_owned(),
@@ -56,7 +57,7 @@ impl MigrationTrait for Migration {
 enum Accounts {
     Table,
     Id,
-    ResidentId,
+    Doc,
     Balance,
     IsDeleted,
 }

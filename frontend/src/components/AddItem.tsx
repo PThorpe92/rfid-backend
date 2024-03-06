@@ -24,8 +24,8 @@ function AddItemModal(props: AddItemProps): JSXElement {
     let errors = { upc: "", name: "", price: "" };
     let isValid = true;
 
-    if (!/^\d{17}$/.test(newItem().upc)) {
-      errors.upc = "RFID must be 17 digits.";
+    if ((newItem().upc.length !== 12)) {
+      errors.upc = "UPC must be 12 digits.";
       isValid = false;
     }
     setFormErrors(errors);
@@ -59,15 +59,15 @@ function AddItemModal(props: AddItemProps): JSXElement {
 
     const response = await API.POST("items", newItem());
     if (response !== undefined && response?.success) {
-      toast.success("Resident added successfully");
+      toast.success("Item added successfully");
       props.onRefresh();
       props.onClose([ExitType.Success]);
     } else {
-      toast.error("Error adding resident");
+      toast.error("Error adding Item");
       props.onClose([ExitType.Error]);
     }
     if (uploadFile() !== null) {
-      const res = await API.UPLOAD(`items/${newItem().upc}/upload`, uploadFile());
+      const res = await API.UPLOAD(`residents/${newItem().upc}/upload`, uploadFile());
       if (res !== undefined && res.success) {
         toast.success("Image uploaded successfully");
       } else {
@@ -95,7 +95,7 @@ function AddItemModal(props: AddItemProps): JSXElement {
               type="text"
               placeholder="UPC (please scan tag)"
               class="input input-bordered w-full max-w-xs"
-              onInput={(e) => updateField("rfid", e.currentTarget.value)}
+              onInput={(e) => updateField("upc", e.currentTarget.value)}
             />
             <input
               type="text"
@@ -107,13 +107,13 @@ function AddItemModal(props: AddItemProps): JSXElement {
               type="text"
               placeholder="Price"
               class="input input-bordered w-full max-w-xs"
-              onInput={(e) => updateField("doc", e.currentTarget.value)}
+              onInput={(e) => updateField("price", parseFloat(e.currentTarget.value))}
             />
             <input
               type="text"
               placeholder="Amount"
               class="input input-bordered w-full max-w-xs"
-              onInput={(e) => updateField("doc", e.currentTarget.value)}
+              onInput={(e) => updateField("quantity", parseInt(e.currentTarget.value))}
             />
             {/* We'll get the Character for the unit and convert to ID */}
             <label class="label label-outline justify-center">Upload Image</label>

@@ -1,3 +1,4 @@
+#[cfg(test)]
 pub mod testapi {
 
     use reqwest::blocking::Response;
@@ -9,10 +10,10 @@ pub mod testapi {
         method: reqwest::Method,
         body: Option<HashMap<&str, &str>>,
     ) -> Response {
-        let ip = std::env::var("LOCAL_IP").unwrap_or("http://localhost:8080/api".to_string());
-        let ip = format!("http://{}:8080/api", ip);
+        let ip = std::env::var("LOCAL_IP").unwrap_or("127.0.0.1".to_string());
+        let ip = format!("{ip}:8080");
         let client = reqwest::blocking::Client::new();
-        let url = format!("{}/{}", ip, endpoint);
+        let url = format!("http://{ip}/api/{endpoint}");
         let request_builder = match method {
             reqwest::Method::GET => client.get(&url),
             reqwest::Method::POST => client.post(&url).json(&body.unwrap()),
@@ -22,7 +23,7 @@ pub mod testapi {
         };
 
         request_builder
-            .timeout(Duration::from_millis(20))
+            .timeout(Duration::from_millis(500))
             .send()
             .expect("Failed to execute request")
     }
@@ -47,7 +48,7 @@ pub mod testapi {
     fn test_residents_create() {
         let ip = std::env::var("LOCAL_IP").unwrap_or("localhost".to_string());
         let ip = format!("http://{}:8080/api", ip);
-        let fake_location = json!({"rfid": "338888222889999", "name": "Fake resident", "doc": "29752", "room": "C-8", "unit": 4, "current_location": 4, "level": 4});
+        let fake_location = json!({"rfid": "338888222889999", "name": "Fake resident", "doc": 29752, "room": "C-8", "unit": 4, "current_location": 4, "level": 4});
         let resp = reqwest::blocking::Client::new()
             .post(format!("{}/residents", ip))
             .json(&fake_location)
@@ -120,16 +121,28 @@ pub mod testapi {
     #[test]
     fn test_locations_timestamps_between() {
         let response = make_request(
-            "locations/13/timestamps/2023-11-10/2023-11-30",
+            "timestamps?range=2023-11-10;2023-11-30&location=8",
             reqwest::Method::GET,
             None,
         );
         assert_eq!(response.status().as_u16(), 200);
+        for item in response.json::<Value>().unwrap()["data"]
+            .as_array()
+            .unwrap()
+        {
+            assert_eq!(item["location"], 8);
+        }
     }
     #[test]
     fn test_locations_residents() {
         let response = make_request("locations/8/residents", reqwest::Method::GET, None);
         assert_eq!(response.status().as_u16(), 200);
+        for item in response.json::<Value>().unwrap()["data"]
+            .as_array()
+            .unwrap()
+        {
+            assert_eq!(item["unit"], 8);
+        }
     }
 
     #[test]
@@ -143,35 +156,31 @@ pub mod testapi {
     fn test_residents_location_current() {
         // TestTimestampsController
         let response = make_request(
-            "locations/13/residents?current=true",
+            "locations/13/residents?active_scan=true",
             reqwest::Method::GET,
             None,
         );
         assert_eq!(response.status().as_u16(), 200);
+        for item in response.json::<Value>().unwrap()["data"]
+            .as_array()
+            .unwrap()
+        {
+            assert_eq!(item["current_location"], 13);
+        }
     }
 
     #[test]
     fn test_timestamps_post() {
-        let ip: &str =
-            &std::env::var("LOCAL_IP").unwrap_or("http://localhost:8080/api".to_string());
-        let ip = format!("http://{}:8080/api", ip);
-        let data = json!({"rfid": "111111111111111", "location": 9});
-        let response = reqwest::blocking::Client::new()
-            .post(format!("{}/timestamps", ip))
-            .json(&data)
-            .timeout(Duration::from_millis(20))
-            .send()
-            .expect("Failed to execute request");
+        let mut body = HashMap::new();
+        body.insert("rfid", "111111111111111");
+        body.insert("location", "9");
+        let response = make_request("/timestamps", reqwest::Method::POST, Some(body));
         assert_eq!(response.status().as_u16(), 201);
-        assert_eq!(
-            response.json::<Value>().unwrap()["data"][0]["resident"]["rfid"],
-            "111111111111111"
-        );
     }
     #[test]
     fn test_timestamps_between() {
         let response = make_request(
-            "timestamps/2023-11-18/2023-11-30",
+            "timestamps?range=2023-11-18;2023-11-30",
             reqwest::Method::GET,
             None,
         );

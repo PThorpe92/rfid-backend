@@ -32,9 +32,8 @@ pub async fn index_timestamps(db: web::Data<DB>, query_params: web::Query<Filter
     }
     match query_params.sort_order() {
         SortOrder::Asc => query = query.order_by_asc(timestamps::Column::Ts),
-    SortOrder::Desc => query = query.order_by_desc(timestamps::Column::Ts),
+        SortOrder::Desc => query = query.order_by_desc(timestamps::Column::Ts),
     }
-    query = query.order_by_desc(timestamps::Column::Ts);
     let result = query.paginate(db, query_params.per_page.unwrap_or(10));
     let page = query_params.page.unwrap_or(1);
     let current_page = result.fetch_page(page.saturating_sub(1)).await?;

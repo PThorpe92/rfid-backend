@@ -17,8 +17,8 @@ pub struct LoginForm {
 #[post("/api/auth/login")]
 pub async fn login(request: HttpRequest, req: Session, claims: Claims, db: web::Data<DB>, form: web::Json<LoginForm>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
     let db = &db.0;
-    if claims.valid {
-            let response = Response::<String>::from_error("Already logged in");
+    if claims.is_valid() {
+            let response = Response::<String>::from_success("Already logged in");
             return Ok(HttpResponse::Ok()
             .insert_header(ContentType::json())
             .json(response));

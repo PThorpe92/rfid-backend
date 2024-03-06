@@ -15,9 +15,17 @@ pub struct Model {
 
 #[derive(Debug, EnumIter, Eq, PartialEq, Clone, Serialize, DeriveRelation, Deserialize)]
 pub enum Relation {
-    #[sea_orm(has_one = "super::transactions::Entity")]
+    #[sea_orm(
+        has_one = "super::transactions::Entity",
+        from = "Column::TransactionId",
+        to = "super::transactions::Column::Id"
+    )]
     Transactions,
-    #[sea_orm(has_one = "super::items::Entity")]
+    #[sea_orm(
+        has_one = "super::items::Entity",
+        from = "Column::ItemId",
+        to = "super::items::Column::Id"
+    )]
     Items,
 }
 

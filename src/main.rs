@@ -1,3 +1,8 @@
+#![deny(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![warn(clippy::cargo)]
+
 use actix_cors::Cors;
 use actix_session::{
     config::{BrowserSession, SessionLifecycle},
@@ -13,8 +18,8 @@ use actix_web::{
 use scan_mvcf::{
     app_config::DB,
     controllers::{
-        accounts_controller, auth_controller, locations_controller, order_controller,
-        residents_controller, timestamps_controller, user_controller,
+        accounts_controller, auth_controller, items_controller, locations_controller,
+        order_controller, residents_controller, timestamps_controller, user_controller,
     },
     middleware::auth::SECRET_KEY,
 };
@@ -28,15 +33,16 @@ async fn main() -> io::Result<()> {
     let upload_dir = std::env::var("UPLOAD_FILE_PATH");
     log::debug!(
         "Temp file path: {:?}",
-        upload_dir.clone().unwrap_or("dumb".to_string())
+        upload_dir.clone().unwrap_or_else(|_| "dumb".to_string())
     );
-    let secure = std::env::var("APP_ENV").unwrap_or("development".to_string()) == "production";
+    let secure =
+        std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string()) == "production";
     let key = Key::derive_from(
         SECRET_KEY
             .get_or_init(|| std::env::var("JWT_SECRET_KEY").unwrap())
             .as_bytes(),
     );
-    let ip = std::env::var("LOCAL_IP").unwrap_or("localhost".to_string());
+    let ip = std::env::var("LOCAL_IP").unwrap_or_else(|_| "localhost".to_string());
     log::info!("starting Actix-Web HTTP server at http://{}", ip);
     let json_config = JsonConfig::default().limit(4096);
     let tempfile_path = actix_multipart::form::tempfile::TempFileConfig::default();
@@ -90,6 +96,8 @@ async fn main() -> io::Result<()> {
                 .service(order_controller::get_orders)
                 .service(user_controller::get_users)
                 .service(user_controller::create)
+                .service(items_controller::index_items)
+                .service(items_controller::create_item)
                 .wrap(middleware::Logger::default())
                 .wrap(cors)
         })

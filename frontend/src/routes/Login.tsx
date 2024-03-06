@@ -1,6 +1,6 @@
 import { JSXElement, createSignal } from "solid-js";
 import { API } from "../api/api";
-import { toast } from "solid-toast";
+import { Toaster, toast } from "solid-toast";
 import Navbar from "../components/Navbar";
 import { SUser } from "../models/models";
 import { A } from "@solidjs/router";
@@ -9,21 +9,37 @@ function Login(): JSXElement {
 
   const [form, setForm] = createSignal({ email: "", password: "" });
   const [error, setError] = createSignal("");
-  const [users, setUsers] = createSignal<SUser[]>([]);
+  const [isLoggedIn, setIsLoggedIn] = createSignal(sessionStorage.getItem("isLoggedIn") === "true" ? true : false);
 
   async function handleSubmit(): Promise<void> {
     const response = await API.POST("auth/login", form());
-    if (response && response.success) {
-      toast.success("Login successful");
+    if (response.success) {
+      toast.success(response.message);
+      sessionStorage.setItem("isLoggedIn", "true");
+      setIsLoggedIn(true);
     } else {
       setError("Invalid username or password");
       toast.error(response?.message);
+      sessionStorage.setItem("isLoggedIn", "false");
+      setIsLoggedIn(false);
     }
   };
 
   return (
     <>
       <Navbar />
+      <Toaster
+        position="bottom-right"
+        gutter={8}
+        toastOptions={{
+          className: "toast",
+          duration: 4000,
+          style: {
+            background: "#2b2b2b",
+            color: "#02eb48",
+          },
+        }}
+      />
       <div class="flex flex-col items-center justify-center">
         <div class="flex-col align-top">
           <div class="col-md-2 offset-md-3">
@@ -49,7 +65,7 @@ function Login(): JSXElement {
                   />
                 </div>
                 <button class="btn btn-outline" onclick={handleSubmit}>Login</button>
-                <A class="btn btn-outline" href="/annex">Annex</A>
+                <A class="btn btn-outline" href={isLoggedIn() ? "/annex" : ""}>Annex Menu</A>
               </div>
             </div>
           </div>

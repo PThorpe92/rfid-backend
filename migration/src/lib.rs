@@ -12,6 +12,9 @@ mod m20240225_161903_users;
 mod m20240227_010532_items;
 mod m20240227_021210_transaction_items;
 mod m20240227_173940_add_inventory;
+mod m20240305_024157_seed_accounts_transactions;
+mod m20240305_030602_seed_transactions;
+mod m20240305_132005_seed_transaction_items;
 
 pub struct Migrator;
 
@@ -31,6 +34,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20240227_010532_items::Migration),
             Box::new(m20240227_021210_transaction_items::Migration),
             Box::new(m20240227_173940_add_inventory::Migration),
+            Box::new(m20240305_024157_seed_accounts_transactions::Migration),
+            Box::new(m20240305_030602_seed_transactions::Migration),
+            Box::new(m20240305_132005_seed_transaction_items::Migration),
         ]
     }
 }

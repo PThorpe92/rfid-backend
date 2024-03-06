@@ -28,6 +28,11 @@ impl MigrationTrait for Migration {
                             .integer()
                             .not_null(),
                     )
+                    .col(
+                        ColumnDef::new(TransactionItems::Quantity)
+                            .integer()
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -55,4 +60,5 @@ enum TransactionItems {
     Id,
     ItemId,
     TransactionId,
+    Quantity,
 }

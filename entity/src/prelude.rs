@@ -6,11 +6,13 @@ pub use super::residents::Entity as Residents;
 pub use super::residents::TimestampResident;
 pub use super::residents::UpdateResident;
 pub use super::timestamps::Entity as Timestamps;
+pub use super::transaction_items::Entity as TransactionItems;
 pub use super::transactions::Entity as Transactions;
 pub use super::transactions::PostTransaction;
 pub use super::users::Entity as Users;
 
 pub trait OrmSerializable {}
+impl OrmSerializable for TransactionItems {}
 impl OrmSerializable for UpdateResident {}
 impl OrmSerializable for Locations {}
 impl OrmSerializable for Residents {}

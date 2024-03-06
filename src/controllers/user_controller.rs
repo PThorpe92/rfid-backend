@@ -15,7 +15,7 @@ pub struct PostUser {
 #[rustfmt::skip]
 #[get("/api/users")]
 pub async fn get_users(claims: Claims, db: web::Data<DB>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !claims.valid {
+    if !claims.is_valid() {
         let response = Response::<String>::from_error("Unauthorized");
         return Ok(HttpResponse::Unauthorized()
             .insert_header(ContentType::json())
@@ -30,7 +30,7 @@ pub async fn get_users(claims: Claims, db: web::Data<DB>) -> Result<HttpResponse
 #[rustfmt::skip]
 #[post("/api/users")]
 pub async fn create(claims: Claims, db: web::Data<DB>, user: web::Json<PostUser>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !claims.valid {
+    if !claims.is_valid() {
         let response = Response::<String>::from_error("Unauthorized");
         return Ok(HttpResponse::Unauthorized()
             .insert_header(ContentType::json())
