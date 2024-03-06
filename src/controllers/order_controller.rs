@@ -55,7 +55,7 @@ impl ReturnOrder {
 #[rustfmt::skip]
 #[get("/api/orders")]
 pub async fn get_orders(auth: Claims, db: Data<DB>, params: Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    if !auth.valid {
+    if !auth.is_valid() {
        let response = Response::<String>::from_error("Unauthorized");
        return Ok(HttpResponse::Ok().json(response));
     }

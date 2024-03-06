@@ -218,12 +218,12 @@ function ActiveScan() {
     <>
       <Navbar />
       <Toaster
-        position="top-center"
+        position="bottom-right"
         gutter={8}
         containerClassName="badge badge-xl badge-success"
         toastOptions={{
           className: "toast",
-          duration: 7000,
+          duration: 4000,
           style: {
             background: "#2b2b2b",
             color: "#02eb48",

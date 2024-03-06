@@ -4,14 +4,23 @@ use serde::{Deserialize, Serialize};
 
 impl OrmSerializable for Model {}
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, DeriveEntityModel)]
+#[derive(
+    Clone,
+    Default,
+    Debug,
+    PartialEq,
+    DeriveEntityModel,
+    DeriveRelatedEntity,
+    Eq,
+    Serialize,
+    Deserialize,
+)]
 #[sea_orm(table_name = "accounts")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i32,
-    #[sea_orm(foreign_key = ("residents", "doc"))]
-    pub resident_id: i32,
-    pub balance: f64,
+    pub doc: i32,
+    pub balance: i32,
     pub is_deleted: bool,
 }
 
@@ -19,7 +28,7 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::residents::Entity",
-        from = "Column::ResidentId",
+        from = "Column::Doc",
         to = "super::residents::Column::Doc"
     )]
     Residents,
@@ -36,6 +45,7 @@ impl Related<super::residents::Entity> for Entity {
         Relation::Residents.def()
     }
 }
+
 impl Related<super::transactions::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Transactions.def()

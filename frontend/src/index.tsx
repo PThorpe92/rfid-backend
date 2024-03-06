@@ -10,6 +10,7 @@ import Monitor from "./routes/Monitor";
 import Login from "./routes/Login";
 import Annex from "./routes/Annex";
 import Items from "./components/Items";
+import Accounts from "./routes/Accounts";
 
 const root = document.getElementById("root");
 
@@ -29,6 +30,7 @@ render(
       <Route path="/login" component={Login} />
       <Route path="/annex" component={Annex} />
       <Route path="/annex/items" component={Items} />
+      <Route path="/annex/accounts" component={Accounts} />
     </Router>
   ),
   document.getElementById("root")!,

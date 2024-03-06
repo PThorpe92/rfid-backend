@@ -46,6 +46,14 @@ export interface STimestamp {
   location: number;
   ts?: string;
 }
+
+export interface SAccount {
+  [key: string]: string | number;
+  id: number;
+  doc: number;
+  balance: number;
+}
+
 export interface SItem {
   [key: string]: string | number;
   id: number;
@@ -60,7 +68,9 @@ export interface STransaction {
   [key: string]: string | number | string[];
   id: number;
   residentDoc: number;
-  total: number;
+  kind: string;
+  amount: number;
+  timestamp: string;
 }
 
 // we send this to the server
@@ -77,5 +87,5 @@ export interface PostTransaction {
 export interface ServerResponse {
   success: boolean;
   message?: string;
-  data: SResident[] | STimestamp[] | SLocation[] | SResidentTimestamp[] | SUser[] | SItem[] | STransaction[];
+  data: SResident[] | STimestamp[] | SLocation[] | SResidentTimestamp[] | SUser[] | SItem[] | STransaction[] | SAccount[];
 }

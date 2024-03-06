@@ -95,7 +95,11 @@ pub enum Relation {
     Locations1,
     #[sea_orm(has_many = "super::timestamps::Entity")]
     Timestamps,
-    #[sea_orm(has_many = "super::accounts::Entity")]
+    #[sea_orm(
+        has_one = "super::accounts::Entity",
+        from = "Column::Doc",
+        to = "super::accounts::Column::Doc"
+    )]
     Accounts,
 }
 

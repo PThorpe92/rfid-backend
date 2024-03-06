@@ -16,13 +16,10 @@ function Annex(): JSXElement {
             Active Order
           </A>
           <A href="/annex/items" class="btn btn-accent btn-lg">
-            Items
+            Items + Inventory
           </A>
-          <A href="/reports" class="btn btn-accent btn-lg">
-            View Reports
-          </A>
-          <A href="/admin" class="btn btn-primary btn-lg">
-            Accounts
+          <A href="/annex/accounts" class="btn btn-primary btn-lg">
+            Resident Accounts
           </A>
         </div>
       </div>

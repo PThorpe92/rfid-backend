@@ -48,3 +48,9 @@ run `npm run dev` and `npx tailwindcss -o ./src/styles.css --watch` in separate 
 
 ```
 
+TESTING: 
+```bash
+cd testapi
+
+cargo test
+```

@@ -62,7 +62,7 @@ impl MigrationTrait for Migration {
                     .name("fk_residents_unit")
                     .from(Entity, Column::Unit)
                     .to(locations::Entity, locations::Column::Id)
-                    .on_delete(ForeignKeyAction::Cascade)
+                    .on_delete(ForeignKeyAction::NoAction)
                     .to_owned(),
             )
             .await

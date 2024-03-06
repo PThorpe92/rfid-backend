@@ -14,7 +14,8 @@ use entity::{
     timestamps,
 };
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, Set, TryIntoModel,
+    ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
+    TryIntoModel,
 };
 use std::path::PathBuf;
 
@@ -103,46 +104,45 @@ pub async fn show(db: web::Data<DB>, doc: actix_web::web::Path<i32>) -> Result<H
 #[rustfmt::skip]
 #[get("/api/residents/{doc}/hours")]
 pub async fn get_resident_hours(db: web::Data<DB>, path: web::Path<i32>, query: web::Query<FilterOpts>) -> Result<HttpResponse, Box<dyn std::error::Error>> {
-    // This function returns the hours a resident spent in a certain location in a given period
-    // (range query parameter) is the range of time. We will need to get all the timestamps for the resident
-    // and calculate the time spent in just the location
     let db = &db.0;
-    let path = path.into_inner();
-    let query = query.into_inner();
-    let range = query.get_range().unwrap_or_default();
-    let beg = range.0;
-    let end = range.1;
-    let loc = query.location.unwrap_or(0);
-    let hours = timestamps::Entity::find()
-        .filter(timestamps::Column::Doc.eq(path))
-        .filter(timestamps::Column::Ts.between(beg, end))
+    let resident_id = path.into_inner();
+    let query_params = query.into_inner();
+    let range = query_params.get_range().unwrap_or_default();
+    let target_location = query_params.location.unwrap();
+
+    // Retrieve all timestamps for the resident within the given period, ordered by timestamp
+    let timestamps = timestamps::Entity::find()
+        .filter(timestamps::Column::Doc.eq(resident_id))
+        .filter(timestamps::Column::Ts.between(range.0, range.1))
+        .order_by(timestamps::Column::Ts, sea_orm::Order::Asc)
         .all(db)
         .await?;
-    log::debug!("Hours: {:?}", hours);
-    // iterate through the timestamps and calculate the hours spent in the location
-    let mut last_ts: NaiveDateTime = NaiveDateTime::default();
-    let mut should_add = false;
-    let total: f32 = hours.iter().fold(0.0, | acc, timestamp | {
-        if timestamp.location == loc {
-            last_ts = timestamp.ts;
-            should_add = true;
-            acc
-        } else if should_add {
-        let diff = timestamp.ts.signed_duration_since(last_ts);
-        let hours = diff.num_seconds() as f32 / 3600.0;
-            last_ts = timestamp.ts;
-            should_add = false;
-            acc + hours
+
+    let mut total_duration_secs = 0i64;
+    let mut entry_ts: Option<NaiveDateTime> = None;
+
+    for timestamp in timestamps.iter() {
+        if timestamp.location == target_location && entry_ts.is_some() {
+            let duration = timestamp.ts.signed_duration_since(entry_ts.unwrap());
+            total_duration_secs += duration.num_seconds();
+            log::debug!("Duration: {}", duration.num_seconds());
+            entry_ts = None;
+        } else if timestamp.location == target_location && entry_ts.is_none() {
+            entry_ts = Some(timestamp.ts);
         } else {
-            acc
+            continue;
         }
-    });
-    let result: ResidentHours = ResidentHours {
-        resident_doc: path,
-        location: loc,
-        hours: total,
+    }
+    // Convert total seconds to hours
+    let total_hours = total_duration_secs as f32 / 3600.0;
+
+    log::debug!("Total hours: {}", total_hours);
+    let result = ResidentHours {
+        resident_doc: resident_id,
+        location: target_location,
+        hours: total_hours,
     };
-    let response: Response<ResidentHours> = Response::from_data(result);
+    let response = Response::from_data(result);
     Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(response))
 }
 
@@ -167,7 +167,7 @@ pub async fn destroy(db: web::Data<DB>, rfid: web::Path<String>,) -> Result<Http
     let mut resident: residents::ActiveModel = resident.unwrap().into();
         resident.is_deleted = Set(true);
     resident.save(db).await?;
-        Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(Response::<residents::Model>::from_success("Resident deleted")))
+        Ok(HttpResponse::Ok().status(StatusCode::NO_CONTENT).insert_header(header::ContentType::json()).json(Response::<residents::Model>::from_success("Resident deleted")))
     } else {
         Ok(HttpResponse::Ok().insert_header(header::ContentType::json()).json(Response::<String>::from_error("Error deleting resident")))
     }
